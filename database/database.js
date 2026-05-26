@@ -116,85 +116,185 @@ function seed() {
   const catCount = db.prepare('SELECT COUNT(*) as c FROM categories').get();
   if (catCount.c > 0) return;
 
-  const insertCat = db.prepare('INSERT INTO categories (name, slug, icon, sort_order) VALUES (?, ?, ?, ?)');
-  const insertProd = db.prepare(`INSERT INTO products (category_id, name, description, has_variants, has_options, base_price, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`);
-  const insertVariant = db.prepare('INSERT INTO product_variants (product_id, name, price, sort_order) VALUES (?, ?, ?, ?)');
-  const insertOption = db.prepare('INSERT INTO product_options (product_id, category_id, option_group, name, price, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
-  const insertCombo = db.prepare('INSERT INTO combos (name, tag, description, price, type, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+  const iCat   = db.prepare('INSERT INTO categories (name, slug, icon, sort_order) VALUES (?, ?, ?, ?)');
+  const iProd  = db.prepare('INSERT INTO products (category_id, name, description, has_variants, has_options, base_price, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const iVar   = db.prepare('INSERT INTO product_variants (product_id, name, price, sort_order) VALUES (?, ?, ?, ?)');
+  const iOpt   = db.prepare('INSERT INTO product_options (product_id, category_id, option_group, name, price, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+  const iCombo = db.prepare('INSERT INTO combos (name, tag, description, price, type, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+
+  function addSucoVariants(pid) {
+    iVar.run(pid, '500ml c/ Água',  13.00, 1);
+    iVar.run(pid, '500ml c/ Leite', 15.00, 2);
+    iVar.run(pid, '700ml c/ Água',  16.00, 3);
+    iVar.run(pid, '700ml c/ Leite', 20.00, 4);
+  }
 
   db.transaction(() => {
-    // Categories
-    const acaiCat = insertCat.run('Açaí', 'acai', '🍇', 1).lastInsertRowid;
-    const burgerCat = insertCat.run('Hambúrguer', 'hamburguer', '🍔', 2).lastInsertRowid;
-    const pastelCat = insertCat.run('Pastel de Feira', 'pastel', '🥟', 3).lastInsertRowid;
-    const bebidaCat = insertCat.run('Bebidas', 'bebidas', '🥤', 4).lastInsertRowid;
+    // ── 1. AÇAÍ ──────────────────────────────────────────────────────────────
+    const acaiCat = iCat.run('Açaí', 'acai', '🍇', 1).lastInsertRowid;
 
-    // Açaí Tradicional
-    const acai1 = insertProd.run(acaiCat, 'Açaí Tradicional', 'Açaí · Cupuaçu · Sorvete', 1, 1, null, 1).lastInsertRowid;
-    insertVariant.run(acai1, '300ml', 8.00, 1);
-    insertVariant.run(acai1, '400ml', 10.00, 2);
-    insertVariant.run(acai1, '500ml', 12.00, 3);
-    insertVariant.run(acai1, '700ml', 15.00, 4);
+    const acai1 = iProd.run(acaiCat, 'Açaí Tradicional', 'Gelado · Monte do seu jeito', 1, 1, null, 1).lastInsertRowid;
+    iVar.run(acai1, '300ml', 9.00,  1); iVar.run(acai1, '400ml', 12.00, 2);
+    iVar.run(acai1, '500ml', 13.00, 3); iVar.run(acai1, '700ml', 20.00, 4);
 
-    // Açaí Trufado
-    const acai2 = insertProd.run(acaiCat, 'Açaí Trufado', 'Premium · Com cobertura especial', 1, 1, null, 2).lastInsertRowid;
-    insertVariant.run(acai2, '300ml', 11.00, 1);
-    insertVariant.run(acai2, '400ml', 13.00, 2);
-    insertVariant.run(acai2, '500ml', 15.00, 3);
-    insertVariant.run(acai2, '700ml', 18.00, 4);
+    const acai2 = iProd.run(acaiCat, 'Açaí Trufado', 'Premium · Com cobertura especial', 1, 1, null, 2).lastInsertRowid;
+    iVar.run(acai2, '300ml', 12.00, 1); iVar.run(acai2, '400ml', 15.00, 2);
+    iVar.run(acai2, '500ml', 16.00, 3); iVar.run(acai2, '700ml', 23.00, 4);
 
-    // Vitaminas
-    const vita = insertProd.run(acaiCat, 'Vitaminas 500ml', 'Açaí batido com frutas', 1, 0, null, 3).lastInsertRowid;
-    insertVariant.run(vita, 'Açaí c/ Banana', 12.00, 1);
-    insertVariant.run(vita, 'Açaí c/ Morango', 12.00, 2);
-    insertVariant.run(vita, 'Açaí c/ Banana & Morango', 13.00, 3);
+    let o = 0;
+    ['Açaí','Cupuaçu','Mangaba','Sorvete Morango','Sorvete Chocolate',
+     'Sorvete Céu Azul','Sorvete Ninho Trufado','Sorvete Flocos','Sorvete Ferrero Rocher','Sorvete Sensação']
+      .forEach(n => iOpt.run(null, acaiCat, 'Gelados', n, 0, o++));
+    ['Banana','Morango','Abacaxi','Kiwi','Manga','Uva Verde']
+      .forEach(n => iOpt.run(null, acaiCat, 'Frutas', n, 0, o++));
+    ['Ovomaltine','Chocoboll','Amendoim','Paçoca','Leite em Pó',
+     'Granulado','Gotas de Chocolate','Bolinha P&B','Granola','Sucrilhos']
+      .forEach(n => iOpt.run(null, acaiCat, 'Ingredientes', n, 0, o++));
+    ['Morango','Leite Condensado','Maracujá','Limão','Caramelo','Chocolate']
+      .forEach(n => iOpt.run(null, acaiCat, 'Caldas', n, 0, o++));
+    iOpt.run(null, acaiCat, 'Adicionais Extras', '1 Camada de Nutella', 6.00, o++);
+    iOpt.run(null, acaiCat, 'Adicionais Extras', 'Creme de Ninho',       3.00, o++);
 
-    // Options para açaí (linked to category)
-    const acaiOpts = [
-      ['Gelados', 'Açaí', 0], ['Gelados', 'Cupuaçu', 0], ['Gelados', 'Mangaba', 0],
-      ['Gelados', 'Flocos', 0], ['Gelados', 'Sensação', 0], ['Gelados', 'Chocolate', 0],
-      ['Gelados', 'Morango', 0], ['Gelados', 'Maracujá', 0],
-      ['Acompanhamentos', 'Confetti', 0], ['Acompanhamentos', 'Paçoca', 0],
-      ['Acompanhamentos', 'Granola', 0], ['Acompanhamentos', 'Amendoim', 0],
-      ['Acompanhamentos', 'Sucrilhos', 0], ['Acompanhamentos', 'Chocoboll', 0],
-      ['Acompanhamentos', 'Gotas de Choc.', 0], ['Acompanhamentos', 'Bolinha P&B', 0],
-      ['Acompanhamentos', 'Ovomaltine', 0],
-      ['Frutas', 'Morango', 0], ['Frutas', 'Banana', 0], ['Frutas', 'Abacaxi', 0], ['Frutas', 'Kiwi', 0],
-      ['Coberturas', 'Morango', 0], ['Coberturas', 'Leite Condensado', 0],
-      ['Coberturas', 'Maracujá', 0], ['Coberturas', 'Limão', 0],
-      ['Coberturas', 'Chocolate', 0], ['Coberturas', 'Caramelo', 0],
-      ['Adicionais Extras', 'Bis', 3.00], ['Adicionais Extras', '01 Camada de Nutella', 5.00],
-      ['Adicionais Extras', '03 Camadas de Morango', 3.00],
-    ];
-    acaiOpts.forEach(([group, name, price], i) => {
-      insertOption.run(null, acaiCat, group, name, price, i);
+    // ── 2. GARRAFINHAS DE AÇAÍ ───────────────────────────────────────────────
+    const garrCat = iCat.run('Garrafinhas de Açaí', 'garrafinhas', '🍶', 2).lastInsertRowid;
+    [
+      ['Açaí c/ Mousse de Maracujá', 'Maracujá fresco com açaí gelado'],
+      ['Açaí c/ Mousse de Morango',  'Morango fresco com açaí gelado'],
+      ['Açaí c/ Creme de Ninho',     'Creme de Ninho com açaí gelado'],
+      ['Açaí c/ Nutella',            'Nutella com açaí gelado'],
+    ].forEach(([name, desc], i) => {
+      const pid = iProd.run(garrCat, name, desc, 1, 0, null, i + 1).lastInsertRowid;
+      iVar.run(pid, '300ml', 15.00, 1); iVar.run(pid, '500ml', 18.00, 2);
     });
 
-    // Hambúrguer
-    insertProd.run(burgerCat, 'Hambúrguer de Picanha', 'Artesanal · Pão brioche · Queijo prato · Bacon crocante', 0, 0, 32.00, 1);
-    insertProd.run(burgerCat, 'Hambúrguer Clássico', 'Pão de hambúrguer · Blend 180g · Queijo · Alface · Tomate', 0, 0, 24.00, 2);
-    insertProd.run(burgerCat, 'Hambúrguer Duplo', 'Dobro de carne · Dobro de sabor', 0, 0, 38.00, 3);
+    // ── 3. SUCOS NATURAIS ─────────────────────────────────────────────────────
+    const sucosCat = iCat.run('Sucos Naturais', 'sucos', '🥤', 3).lastInsertRowid;
+    [
+      ['Morango','Feito com frutas selecionadas · 100% Natural',1],
+      ['Maracujá','Feito com frutas selecionadas · 100% Natural',2],
+      ['Melancia','Feito com frutas selecionadas · 100% Natural',3],
+      ['Abacaxi','Feito com frutas selecionadas · 100% Natural',4],
+      ['Abacaxi c/ Hortelã','Feito com frutas selecionadas · 100% Natural',5],
+      ['Morango c/ Hortelã','Feito com frutas selecionadas · 100% Natural',6],
+      ['Goiaba','Feito com frutas selecionadas · 100% Natural',7],
+      ['Manga','Feito com frutas selecionadas · 100% Natural',8],
+    ].forEach(([name, desc, sort]) => {
+      addSucoVariants(iProd.run(sucosCat, name, desc, 1, 0, null, sort).lastInsertRowid);
+    });
+    [
+      ['Laranja Natural','500ml ou 700ml · Espremida na hora',9],
+      ['Limão','500ml ou 700ml · Feito na hora',10],
+    ].forEach(([name, desc, sort]) => {
+      const pid = iProd.run(sucosCat, name, desc, 1, 0, null, sort).lastInsertRowid;
+      iVar.run(pid, '500ml', 13.00, 1); iVar.run(pid, '700ml', 20.00, 2);
+    });
 
-    // Pastel
-    insertProd.run(pastelCat, '1 Pastel', 'Sabores: frango, carne, queijo, calabresa ou misto', 0, 0, 10.00, 1);
-    insertProd.run(pastelCat, '3 Pastéis', 'Escolha 3 sabores diferentes', 0, 0, 27.00, 2);
-    insertProd.run(pastelCat, '6 Pastéis', 'O combo perfeito pra galera', 0, 0, 45.00, 3);
+    // ── 4. HAMBÚRGUER ─────────────────────────────────────────────────────────
+    const burgerCat = iCat.run('Hambúrguer', 'hamburguer', '🍔', 4).lastInsertRowid;
+    [
+      ['X Burguer Tradicional Maloka','Pão de hambúrguer · Queijo prato · Hambúrguer de picanha · Maionese tradicional',12.00,1],
+      ['X Burguer Artesanal do Chef','Pão de brioche · Hambúrguer artesanal · Queijo prato · Maionese especial',14.00,2],
+      ['X Salada Maloka','Pão de hambúrguer · Queijo prato · Hambúrguer de picanha · Maionese · Alface · Tomate',13.00,3],
+      ['X Salada do Chef','Pão de brioche · Hambúrguer artesanal · Queijo prato · Maionese especial · Alface · Tomate · Cebola roxa',16.00,4],
+      ['Big Burguer Maloka','Pão de hambúrguer · 2 hambúrgueres de picanha · Queijo prato · Maionese tradicional',16.00,5],
+      ['Big Burguer do Chef','Pão de brioche · 2 hambúrgueres artesanais · Queijo prato · Maionese especial',19.00,6],
+      ['X Egg Maloka','Pão de hambúrguer · Queijo prato · Ovo · Hambúrguer de picanha · Maionese · Alface · Tomate',16.00,7],
+      ['Egg Maloka do Chef','Pão de brioche · Hambúrguer artesanal · Maionese especial · Ovo · Queijo prato · Alface · Tomate',19.00,8],
+      ['X Cheddar Maloka','Pão de hambúrguer · Hambúrguer de picanha · Queijo prato · Cheddar · Maionese tradicional',16.00,9],
+      ['Duplo Cheddar do Chef','Pão de brioche · 2 hambúrgueres artesanais · Cheddar · Queijo prato',20.00,10],
+      ['X Catupiry Maloka','Pão de hambúrguer · Hambúrguer de picanha · Queijo prato · Catupiry',16.00,11],
+      ['X Catupiry do Chef','Pão de brioche · Hambúrguer artesanal · Queijo prato · Catupiry',19.00,12],
+      ['X Bacon Maloka','Pão de hambúrguer · Hambúrguer de picanha · Bacon · Queijo prato · Maionese · Alface · Tomate',16.00,13],
+      ['X Bacon do Chef','Pão de brioche · Hambúrguer artesanal · Fatias de bacon · Queijo prato · Alface · Tomate',19.00,14],
+      ['X Calabresa Maloka','Pão de hambúrguer · Hambúrguer de picanha · Calabresa · Queijo prato · Maionese · Alface · Tomate',16.00,15],
+      ['X Calabresa do Chef','Pão de brioche · Hambúrguer artesanal · Calabresa · Queijo prato · Maionese especial · Alface · Tomate',19.00,16],
+      ['X Egg Bacon Maloka','Pão de hambúrguer · Hambúrguer de picanha · Ovo · Bacon · Queijo prato · Maionese · Alface · Tomate',18.00,17],
+      ['Egg Bacon do Chef','Pão de brioche · Hambúrguer artesanal · Maionese especial · Bacon · Ovo · Alface · Tomate',21.00,18],
+      ['X Tudo Maloka','Pão de hambúrguer · 2 hambúrgueres de picanha · Queijo prato · Calabresa · Ovo · Bacon · Alface · Tomate',22.00,19],
+      ['O Magnífico do Chef','Pão de brioche · 2 hambúrgueres artesanais · Queijo prato · Calabresa · Ovo · Bacon · Maionese especial · Presunto',25.00,20],
+    ].forEach(([name, desc, price, sort]) => iProd.run(burgerCat, name, desc, 0, 1, price, sort));
+    [['Bacon',3],['Catupiry',3],['Cheddar',3],['Ovo',2],['Milho',3],['Batata Palha',3],['Cebola Roxa',3]]
+      .forEach(([name, price], i) => iOpt.run(null, burgerCat, 'Adicionais Extras', name, price, i));
 
-    // Bebidas
-    insertProd.run(bebidaCat, 'Refrigerante Lata', 'Coca-Cola, Guaraná, Sprite', 0, 0, 6.00, 1);
-    insertProd.run(bebidaCat, 'Refrigerante 2L', 'Coca-Cola, Guaraná ou Sprite', 0, 0, 12.00, 2);
-    insertProd.run(bebidaCat, 'Água Mineral', 'Garrafa 500ml', 0, 0, 4.00, 3);
-    insertProd.run(bebidaCat, 'Vinho Quente', 'Copo quentinho para aquecer o corpo e o coração', 0, 0, 7.00, 4);
+    // ── 5. BATATA FRITA ───────────────────────────────────────────────────────
+    const batataCat = iCat.run('Batata Frita', 'batata', '🍟', 5).lastInsertRowid;
+    const batata = iProd.run(batataCat, 'Batata Frita', 'Crocante, quentinha e irresistível!', 1, 1, null, 1).lastInsertRowid;
+    iVar.run(batata, 'Pequena', 10.00, 1); iVar.run(batata, 'Média', 15.00, 2); iVar.run(batata, 'Grande', 20.00, 3);
+    iOpt.run(batata, null, 'Adicionais Extras', 'Bacon',           3.00, 0);
+    iOpt.run(batata, null, 'Adicionais Extras', 'Cheddar',         3.00, 1);
+    iOpt.run(batata, null, 'Adicionais Extras', 'Bacon e Cheddar', 5.00, 2);
 
-    // Combos
-    insertCombo.run('Promoção Pastéis', '🔥 Promoção', '6 pastéis deliciosos + refrigerante 2 litros. Perfeito para a galera e a família!', 50.00, 'paid', 1);
-    insertCombo.run('Oferta Açaí', '❄️ Oferta', 'Dois açaís 500ml por apenas R$20. Sabor irresistível e geladinho!', 20.00, 'paid', 2);
-    insertCombo.run('Vinho Quente', '🍷 Especial', 'Copo quentinho para aquecer o corpo e o coração. Perfeito para noites frias!', 7.00, 'paid', 3);
-    insertCombo.run('Combo Black Label', '👑 Elite', 'Whisky Original + 4 Gelo de Coco + 4 Red Bull. Para quem sabe o que quer.', 349.90, 'paid', 4);
-    insertCombo.run('Gin Tanqueray VIP', '💎 VIP', 'Tanqueray + Tônica + Botânicos Especiais. Sofisticação da quebrada.', 289.00, 'paid', 5);
+    // ── 6. PASTEL DE FEIRA ────────────────────────────────────────────────────
+    const pastelCat = iCat.run('Pastel de Feira', 'pastel', '🥟', 6).lastInsertRowid;
 
-    console.log('✅ Banco de dados populado com sucesso!');
+    const pastel1 = iProd.run(pastelCat, 'Pastel Tradicional', 'Feito na hora · Frito na hora · Escolha o recheio', 1, 0, null, 1).lastInsertRowid;
+    ['Carne','Queijo','Frango','Calabresa'].forEach((n, i) => iVar.run(pastel1, n, 10.00, i + 1));
+
+    const pastel2 = iProd.run(pastelCat, 'Pastel 2 Sabores', 'Escolha 2 recheios · Feito na hora', 0, 1, 12.00, 2).lastInsertRowid;
+    ['Carne','Queijo','Frango','Calabresa','Bacon','Cheddar','Catupiry','Ovo','Milho']
+      .forEach((n, i) => { iOpt.run(pastel2, null, 'Recheio 1', n, 0, i); iOpt.run(pastel2, null, 'Recheio 2', n, 0, i); });
+
+    const pastel3 = iProd.run(pastelCat, 'Pastel Premium', 'Recheios especiais · R$ 15,00 cada', 1, 0, null, 3).lastInsertRowid;
+    ['Camarão c/ Queijo','Camarão c/ Catupiry','Carne Seca c/ Queijo','Carne Seca c/ Catupiry']
+      .forEach((n, i) => iVar.run(pastel3, n, 15.00, i + 1));
+
+    const pastel4 = iProd.run(pastelCat, 'Monte seu Pastel', 'Até 3 recheios por R$ 15,00 · Exceto premium', 0, 1, 15.00, 4).lastInsertRowid;
+    ['Carne','Queijo','Frango','Calabresa','Bacon','Cheddar','Catupiry','Ovo','Milho','Bauru','Pizza','Portuguesa','Três Queijos','Queijo c/ Milho','Bacon Queijo']
+      .forEach((n, i) => iOpt.run(pastel4, null, 'Recheios (até 3)', n, 0, i));
+
+    // ── 7. CAIPIRINHAS ────────────────────────────────────────────────────────
+    const caipCat = iCat.run('Caipirinhas', 'caipirinhas', '🍹', 7).lastInsertRowid;
+
+    const caipTrad = iProd.run(caipCat, 'Caipirinha Tradicional', 'Feita na hora com frutas frescas · Escolha o sabor e a bebida', 1, 1, null, 1).lastInsertRowid;
+    [['Com Vodka',13.99],['Com Velho Barreiro',13.99],['Com Sakê',16.99],['Com Jurupinga',18.99]]
+      .forEach(([n, p], i) => iVar.run(caipTrad, n, p, i + 1));
+    ['Abacaxi','Abacaxi c/ Hortelã','Morango','Morango c/ Hortelã','Maracujá',
+     'Kiwi','Kiwi c/ Hortelã','Limão','Limão c/ Hortelã','Melancia','Melancia c/ Hortelã','Manga']
+      .forEach((n, i) => iOpt.run(caipTrad, null, 'Sabor', n, 0, i));
+
+    const caipGour = iProd.run(caipCat, 'Caipirinha Gourmet', 'Premium · Feita na hora com frutas frescas', 1, 1, null, 2).lastInsertRowid;
+    [['Com Vodka',15.99],['Com Velho Barreiro',15.99],['Com Sakê',20.00],['Com Jurupinga',25.00]]
+      .forEach(([n, p], i) => iVar.run(caipGour, n, p, i + 1));
+    ['Abacaxi','Abacaxi c/ Hortelã','Abacaxi ao Vinho','Morango','Morango c/ Hortelã','Morango ao Vinho',
+     'Maracujá','Kiwi','Kiwi c/ Hortelã','Limão','Limão c/ Hortelã','Melancia','Melancia c/ Hortelã','Manga']
+      .forEach((n, i) => iOpt.run(caipGour, null, 'Sabor', n, 0, i));
+
+    const caipPrem = iProd.run(caipCat, 'Caipirinha Premium', 'Sabores especiais · Top de linha', 1, 1, null, 3).lastInsertRowid;
+    [['Com Vodka',22.99],['Com Velho Barreiro',22.99],['Com Sakê',26.99],['Com Jurupinga',28.00]]
+      .forEach(([n, p], i) => iVar.run(caipPrem, n, p, i + 1));
+    ['Céu Azul','Paçoca','Ovomaltine','Açaí c/ Morango','Açaí c/ Maracujá',
+     'Ninho c/ Morango','Cupuaçu c/ Morango','Ovomaltine c/ Maracujá','Frutas Vermelhas']
+      .forEach((n, i) => iOpt.run(caipPrem, null, 'Sabor', n, 0, i));
+
+    const caip2Trad = iProd.run(caipCat, 'Caipirinha 2 Sabores Tradicional', 'Dois sabores incríveis em um só copo', 1, 1, null, 4).lastInsertRowid;
+    [['Com Vodka',16.99],['Com Velho Barreiro',16.99],['Com Sakê',21.00],['Com Jurupinga',21.99]]
+      .forEach(([n, p], i) => iVar.run(caip2Trad, n, p, i + 1));
+    ['Morango c/ Limão','Abacaxi c/ Limão','Maracujá c/ Limão','Melancia c/ Limão',
+     'Kiwi c/ Limão','Kiwi c/ Morango','Maracujá c/ Morango','Abacaxi c/ Morango']
+      .forEach((n, i) => iOpt.run(caip2Trad, null, 'Sabores', n, 0, i));
+
+    const caip2Gour = iProd.run(caipCat, 'Caipirinha 2 Sabores Gourmet', 'Dois sabores gourmet em um só copo', 1, 1, null, 5).lastInsertRowid;
+    [['Com Vodka',19.99],['Com Velho Barreiro',19.99],['Com Sakê',23.99],['Com Jurupinga',24.99]]
+      .forEach(([n, p], i) => iVar.run(caip2Gour, n, p, i + 1));
+    ['Morango c/ Limão','Abacaxi c/ Limão','Maracujá c/ Limão','Melancia c/ Limão',
+     'Kiwi c/ Limão','Kiwi c/ Morango','Maracujá c/ Morango','Abacaxi c/ Morango']
+      .forEach((n, i) => iOpt.run(caip2Gour, null, 'Sabores', n, 0, i));
+
+    // ── 8. BEBIDAS ────────────────────────────────────────────────────────────
+    const bebCat = iCat.run('Bebidas', 'bebidas', '🥤', 8).lastInsertRowid;
+    iProd.run(bebCat, 'Refrigerante Lata',  'Coca-Cola, Guaraná, Sprite',   0, 0, 6.00,  1);
+    iProd.run(bebCat, 'Refrigerante 2L',    'Coca-Cola, Guaraná ou Sprite',  0, 0, 12.00, 2);
+    iProd.run(bebCat, 'Água Mineral',       'Garrafa 500ml',                 0, 0, 4.00,  3);
+    iProd.run(bebCat, 'Vinho Quente',       'Copo quentinho para a noite',   0, 0, 7.00,  4);
+
+    // ── COMBOS ────────────────────────────────────────────────────────────────
+    iCombo.run('Oferta Açaí',       '❄️ Oferta',   'Dois açaís 500ml por R$20. Geladinho!',                         20.00,  'paid', 1);
+    iCombo.run('Combo Pastel',      '🔥 Promoção', '6 pastéis + refrigerante 2L. Perfeito pra galera!',             50.00,  'paid', 2);
+    iCombo.run('Vinho Quente',      '🍷 Especial', 'Copo quentinho para noites frias!',                              7.00,  'paid', 3);
+    iCombo.run('Combo Black Label', '👑 Elite',    'Whisky Original + 4 Gelo de Coco + 4 Red Bull.',               349.90, 'paid', 4);
+    iCombo.run('Gin Tanqueray VIP', '💎 VIP',      'Tanqueray + Tônica + Botânicos Especiais.',                     289.00, 'paid', 5);
+
+    console.log('✅ Cardápio completo populado com sucesso!');
   })();
 }
 
