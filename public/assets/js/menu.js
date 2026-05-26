@@ -2,16 +2,23 @@
 let menuData = [];
 let combosData = [];
 let currentProduct = null;
+let currentCombo = null;
 let selectedVariant = null;
 let selectedOptions = {};
 let qty = 1;
 const isMobile = () => window.innerWidth <= 900;
 
-const MAX_OPTIONS_PER_GROUP = 5;
+const MAX_FREE_OPTIONS = 5;
+
+let comboAcaiCount = 1;
+let comboAcaiIndex = 0;
+let selectedOptionsArray = [{}];
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadMenu(), loadCombos()]);
+  renderCategoryTabs(menuData);
+  renderAllProducts(menuData, 'todos');
   renderCartUI();
   setupMobileCart();
 });
@@ -20,8 +27,6 @@ async function loadMenu() {
   try {
     const res = await fetch('/api/menu');
     menuData = await res.json();
-    renderCategoryTabs(menuData);
-    renderAllProducts(menuData, 'todos');
   } catch {
     document.getElementById('menuProducts').innerHTML =
       '<div style="text-align:center;padding:3rem;color:var(--gray);">Erro ao carregar cardápio. Tente novamente.</div>';
@@ -164,6 +169,11 @@ function addComboToCart(comboId) {
   const combo = combosData.find(c => c.id === comboId);
   if (!combo) return;
 
+  if (/açaí|acai/i.test(combo.name)) {
+    openComboModal(combo);
+    return;
+  }
+
   const price = combo.type === 'free' ? 0 : parseFloat(combo.price);
   const item = {
     productId: `combo-${combo.id}`,
@@ -179,6 +189,97 @@ function addComboToCart(comboId) {
   addItem(item);
   renderCartUI();
   showToast(`${combo.name} adicionado!`);
+}
+
+function detectAcaiCount(combo) {
+  const text = (combo.name + ' ' + (combo.description || '')).toLowerCase();
+  if (/dois|2\s*x?\s*açaí|dois açaís/i.test(text)) return 2;
+  if (/três|3\s*x?\s*açaí|três açaís/i.test(text)) return 3;
+  return 1;
+}
+
+function buildAcaiOptionsHtml(acaiCat) {
+  if (!acaiCat || !acaiCat.products.length) return '';
+  const opts = acaiCat.products[0].options;
+  if (!opts || !Object.keys(opts).length) return '';
+  let html = '';
+  Object.entries(opts).forEach(([group, optList]) => {
+    const isExtra = group === 'Adicionais Extras';
+    html += `<div class="options-group">
+      <div class="options-group-title">
+        ${group}${isExtra ? ' <span style="color:var(--green);font-size:.7rem;">(+ preço)</span>' : ''}
+      </div>
+      <div class="options-list">${optList.map(opt => {
+        const isSelected = selectedOptions[group]?.some(o => o.name === opt.name);
+        return `<div class="option-chip${isSelected ? ' selected' : ''}"
+             onclick="toggleOption('${group}', '${opt.name}', ${opt.price}, this)"
+             data-group="${group}" data-name="${opt.name}" data-price="${opt.price}">
+          ${opt.name}${opt.price > 0 ? `<span class="chip-price">+${formatBRL(opt.price)}</span>` : ''}
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function buildComboModalBody(combo, acaiCat) {
+  let html = `<div id="freeOptionsCounter" style="text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.45rem 1rem;margin-bottom:.75rem;font-size:.82rem;color:var(--gray);">
+    <span id="freeCountText">0</span>/${MAX_FREE_OPTIONS} opções gratuitas selecionadas
+  </div>`;
+
+  if (comboAcaiCount > 1) {
+    const tabs = Array.from({length: comboAcaiCount}, (_, i) =>
+      `<button class="menu-cat-btn${i === comboAcaiIndex ? ' active' : ''}"
+               onclick="switchAcaiTab(${i})" style="font-size:.82rem;padding:.4rem .9rem;">
+        Açaí ${i + 1}
+      </button>`).join('');
+    html += `<div style="display:flex;gap:.5rem;margin-bottom:.75rem;">${tabs}</div>`;
+  }
+
+  const optionsHtml = buildAcaiOptionsHtml(acaiCat);
+  if (!optionsHtml) {
+    html += `<div style="text-align:center;color:var(--gray);padding:1rem;">
+      <p>${combo.description || 'Clique em adicionar para incluir no pedido.'}</p>
+    </div>`;
+  } else {
+    html += optionsHtml;
+  }
+  return html;
+}
+
+function switchAcaiTab(index) {
+  comboAcaiIndex = index;
+  selectedOptions = selectedOptionsArray[comboAcaiIndex];
+  const acaiCat = menuData.find(c => /açaí|acai/i.test(c.slug || c.name));
+  document.getElementById('modalBody').innerHTML = buildComboModalBody(currentCombo, acaiCat);
+  updateFreeCounter();
+  updateModalSubtotal();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openComboModal(combo) {
+  currentCombo = combo;
+  currentProduct = null;
+  selectedVariant = null;
+
+  comboAcaiCount = detectAcaiCount(combo);
+  comboAcaiIndex = 0;
+  selectedOptionsArray = Array.from({length: comboAcaiCount}, () => ({}));
+  selectedOptions = selectedOptionsArray[0];
+  qty = 1;
+
+  document.getElementById('modalProductName').textContent = combo.name;
+  document.getElementById('modalProductDesc').textContent = combo.description || '';
+  document.getElementById('modalQty').textContent = '1';
+
+  const acaiCat = menuData.find(c => /açaí|acai/i.test(c.slug || c.name));
+  document.getElementById('modalBody').innerHTML = buildComboModalBody(combo, acaiCat);
+
+  updateFreeCounter();
+  updateModalSubtotal();
+  document.getElementById('productModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderCategorySection(cat) {
@@ -242,6 +343,7 @@ function closeModal() {
   document.getElementById('productModal').classList.remove('open');
   document.body.style.overflow = '';
   currentProduct = null;
+  currentCombo = null;
 }
 
 function renderModalBody(product) {
@@ -262,13 +364,14 @@ function renderModalBody(product) {
   }
 
   if (product.has_options && product.options && Object.keys(product.options).length) {
+    html += `<div id="freeOptionsCounter" style="text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.45rem 1rem;margin-bottom:.75rem;font-size:.82rem;color:var(--gray);">
+      <span id="freeCountText">0</span>/${MAX_FREE_OPTIONS} opções gratuitas selecionadas
+    </div>`;
     Object.entries(product.options).forEach(([group, opts]) => {
       const isExtra = group === 'Adicionais Extras';
-      const groupId = 'count-' + group.replace(/[^a-zA-Z0-9]/g, '-');
       html += `<div class="options-group">
-        <div class="options-group-title" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>${group}${isExtra ? ' <span style="color:var(--green);font-size:.7rem;">(+ preço)</span>' : ''}</span>
-          <span style="font-size:.7rem;color:var(--gray);" id="${groupId}">0/${MAX_OPTIONS_PER_GROUP}</span>
+        <div class="options-group-title">
+          ${group}${isExtra ? ' <span style="color:var(--green);font-size:.7rem;">(+ preço)</span>' : ''}
         </div>
         <div class="options-list">${
           opts.map(opt => `
@@ -308,16 +411,24 @@ function toggleOption(group, name, price, el) {
     selectedOptions[group].splice(idx, 1);
     el.classList.remove('selected');
   } else {
-    if (selectedOptions[group].length >= MAX_OPTIONS_PER_GROUP) {
-      showToast(`Máximo de ${MAX_OPTIONS_PER_GROUP} opções por grupo!`, 'error');
+    if (parseFloat(price) === 0 && countFreeOptions(selectedOptions) >= MAX_FREE_OPTIONS) {
+      showToast(`Máximo de ${MAX_FREE_OPTIONS} opções gratuitas por açaí!`, 'error');
       return;
     }
     selectedOptions[group].push({ name, price: parseFloat(price) });
     el.classList.add('selected');
   }
-  const countEl = document.getElementById('count-' + group.replace(/[^a-zA-Z0-9]/g, '-'));
-  if (countEl) countEl.textContent = `${selectedOptions[group].length}/${MAX_OPTIONS_PER_GROUP}`;
+  updateFreeCounter();
   updateModalSubtotal();
+}
+
+function countFreeOptions(opts) {
+  return Object.values(opts).flat().filter(o => (o.price || 0) === 0).length;
+}
+
+function updateFreeCounter() {
+  const el = document.getElementById('freeCountText');
+  if (el) el.textContent = countFreeOptions(selectedOptions);
 }
 
 function changeQty(delta) {
@@ -327,15 +438,21 @@ function changeQty(delta) {
 }
 
 function getModalItemPrice() {
-  let base = 0;
-  if (currentProduct.has_variants && selectedVariant) {
-    base = selectedVariant.price;
-  } else {
-    base = currentProduct.base_price || 0;
+  if (currentCombo) {
+    const base = currentCombo.type === 'free' ? 0 : parseFloat(currentCombo.price);
+    const extrasTotal = selectedOptionsArray.reduce((sum, opts) =>
+      sum + Object.values(opts).flat().reduce((s, o) => s + (o.price || 0), 0), 0);
+    return base + extrasTotal;
   }
-  const extrasTotal = Object.values(selectedOptions)
-    .flat()
-    .reduce((sum, o) => sum + (o.price || 0), 0);
+  let base = 0;
+  if (currentProduct) {
+    if (currentProduct.has_variants && selectedVariant) {
+      base = selectedVariant.price;
+    } else {
+      base = currentProduct.base_price || 0;
+    }
+  }
+  const extrasTotal = Object.values(selectedOptions).flat().reduce((sum, o) => sum + (o.price || 0), 0);
   return base + extrasTotal;
 }
 
@@ -345,23 +462,62 @@ function updateModalSubtotal() {
 }
 
 function addToCart() {
-  if (!currentProduct) return;
+  if (!currentProduct && !currentCombo) return;
+
+  const price = getModalItemPrice();
+
+  if (currentCombo) {
+    // Validate: all açaís must have at least one option chosen
+    if (comboAcaiCount > 1) {
+      const emptyIdx = selectedOptionsArray.findIndex(opts =>
+        Object.values(opts).flat().length === 0
+      );
+      if (emptyIdx !== -1) {
+        switchAcaiTab(emptyIdx);
+        showToast(`Monte o Açaí ${emptyIdx + 1} antes de continuar!`, 'error');
+        return;
+      }
+    }
+
+    const comboName = currentCombo.name;
+    const allSummary = selectedOptionsArray.map((opts, i) => {
+      const parts = Object.entries(opts)
+        .filter(([, v]) => v.length)
+        .map(([group, list]) => `${group}: ${list.map(o => o.name).join(', ')}`)
+        .join(' · ');
+      if (!parts) return null;
+      return comboAcaiCount > 1 ? `Açaí ${i + 1}: ${parts}` : parts;
+    }).filter(Boolean).join(' | ');
+
+    addItem({
+      productId: `combo-${currentCombo.id}`,
+      productName: comboName,
+      variant: null,
+      options: selectedOptionsArray,
+      optionsSummary: allSummary || (currentCombo.tag || ''),
+      unitPrice: price,
+      qty,
+      subtotal: parseFloat((price * qty).toFixed(2)),
+    });
+    renderCartUI();
+    closeModal();
+    showToast(`${comboName} adicionado!`);
+    return;
+  }
 
   if (currentProduct.has_variants && !selectedVariant) {
     showToast('Selecione um tamanho!', 'error');
     return;
   }
 
-  const price = getModalItemPrice();
   const variantName = selectedVariant ? selectedVariant.name : null;
-  const productName = currentProduct.name; // save before closeModal nulls currentProduct
-
+  const productName = currentProduct.name;
   const optionsSummary = Object.entries(selectedOptions)
     .filter(([, opts]) => opts.length)
     .map(([group, opts]) => `${group}: ${opts.map(o => o.name).join(', ')}`)
     .join(' · ');
 
-  const item = {
+  addItem({
     productId: currentProduct.id,
     productName,
     variant: variantName,
@@ -370,9 +526,7 @@ function addToCart() {
     unitPrice: price,
     qty,
     subtotal: parseFloat((price * qty).toFixed(2)),
-  };
-
-  addItem(item);
+  });
   renderCartUI();
   closeModal();
   showToast(`${productName} adicionado!`);

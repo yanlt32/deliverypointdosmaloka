@@ -226,9 +226,47 @@ function closeDetailPanel() {
   document.getElementById('orderDetailPanel').classList.remove('open');
 }
 
+function formatItemOptions(item) {
+  const s = item.optionsSummary || '';
+  if (!s) return '';
+
+  // Multi-açaí: sections separated by " | "
+  if (s.includes(' | ')) {
+    return s.split(' | ').map(section => {
+      const colon = section.indexOf(': ');
+      const title  = colon !== -1 ? section.slice(0, colon) : section;
+      const rest   = colon !== -1 ? section.slice(colon + 2) : '';
+      const groups = rest ? rest.split(' · ') : [];
+      return `<div style="margin-top:.5rem;background:rgba(255,255,255,.04);border-radius:6px;padding:.4rem .6rem;">
+        <div style="font-size:.7rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem;">${title}</div>
+        ${groups.map(g => `<div style="font-size:.75rem;color:var(--light);line-height:1.5;">· ${g}</div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  // Single item: groups separated by " · "
+  const groups = s.split(' · ');
+  if (groups.length <= 1) {
+    return `<div style="font-size:.75rem;color:var(--gray);margin-top:.25rem;">${s}</div>`;
+  }
+  return `<div style="margin-top:.4rem;background:rgba(255,255,255,.04);border-radius:6px;padding:.4rem .6rem;">
+    ${groups.map(g => `<div style="font-size:.75rem;color:var(--light);line-height:1.5;">· ${g}</div>`).join('')}
+  </div>`;
+}
+
+function normalizePhone(raw) {
+  let d = (raw || '').replace(/\D/g, '');
+  // Strip international prefix 55 when present (>11 digits = 55 + DDD + number)
+  if (d.startsWith('55') && d.length > 11) d = d.slice(2);
+  // 11 digits starting with 55: country code was wrongly parsed as DDD by the formatter
+  if (d.startsWith('55') && d.length === 11) d = d.slice(2);
+  return d;
+}
+
 function renderOrderDetail(order) {
   const addr = [order.street, order.number, order.complement, order.neighborhood, order.city]
     .filter(Boolean).join(', ');
+  const waPhone = `55${normalizePhone(order.customer_phone)}`;
   const whatsappMsg = encodeURIComponent(`Olá ${order.customer_name}! Seu pedido ${order.order_number} está sendo preparado. 🍽️`);
 
   document.getElementById('orderDetailContent').innerHTML = `
@@ -247,7 +285,7 @@ function renderOrderDetail(order) {
         <div style="font-size:.85rem;color:var(--gray);margin-top:.4rem;">${ico('map-pin',14)} ${addr}</div>
         ${order.reference ? `<div style="font-size:.8rem;color:var(--gray);margin-top:.2rem;">Ref: ${order.reference}</div>` : ''}
         <div style="display:flex;gap:.5rem;margin-top:.85rem;flex-wrap:wrap;">
-          <a href="https://wa.me/55${order.customer_phone.replace(/\D/g,'')}?text=${whatsappMsg}"
+          <a href="https://wa.me/${waPhone}?text=${whatsappMsg}"
              target="_blank" class="btn btn-gold btn-sm" style="display:inline-flex;">
             ${ico('message-circle',13)} WhatsApp
           </a>
@@ -267,19 +305,21 @@ function renderOrderDetail(order) {
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;">
         <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;">${ico('shopping-bag',13)} Itens</div>
         ${(order.items || []).map(item => `
-          <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);gap:.5rem;">
-            <div>
-              <div style="font-size:.85rem;font-weight:600;color:var(--white);">${item.qty > 1 ? `${item.qty}x ` : ''}${item.productName}</div>
-              ${item.variant ? `<div style="font-size:.74rem;color:var(--gray);">${item.variant}</div>` : ''}
-              ${item.optionsSummary ? `<div style="font-size:.72rem;color:var(--gray);">${item.optionsSummary}</div>` : ''}
+          <div style="padding:.65rem 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+              <div style="font-size:.9rem;font-weight:700;color:var(--white);">
+                ${item.qty > 1 ? `<span style="color:var(--gold);">${item.qty}x</span> ` : ''}${item.productName}
+              </div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold);flex-shrink:0;">${formatBRL(item.subtotal)}</div>
             </div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gold);flex-shrink:0;">${formatBRL(item.subtotal)}</div>
+            ${item.variant ? `<div style="font-size:.78rem;color:var(--gray);margin-top:.15rem;">${item.variant}</div>` : ''}
+            ${formatItemOptions(item)}
           </div>`).join('')}
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);">
-          <div style="font-weight:700;color:var(--white);">Total</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--gold);">${formatBRL(order.total)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.85rem;padding-top:.85rem;border-top:2px solid var(--border);">
+          <div style="font-weight:700;color:var(--white);font-size:.95rem;">Total</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--gold);">${formatBRL(order.total)}</div>
         </div>
-        <div style="font-size:.75rem;color:var(--gray);margin-top:.25rem;text-align:right;">
+        <div style="font-size:.75rem;color:var(--gray);margin-top:.3rem;text-align:right;">
           ${order.payment_method === 'pix' ? `${ico('smartphone',12)} Pix` : `${ico('banknote',12)} Dinheiro/Cartão`}
           ${order.payment_status === 'pago' ? '<span style="color:var(--green);">· Pago</span>' : ''}
         </div>

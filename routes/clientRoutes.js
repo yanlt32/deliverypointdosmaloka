@@ -91,6 +91,23 @@ router.post('/orders', async (req, res) => {
   });
 });
 
+// GET /api/orders/by-phone?phone=11999999999
+router.get('/orders/by-phone', (req, res) => {
+  const phone = (req.query.phone || '').replace(/\D/g, '');
+  if (!phone || phone.length < 8) return res.status(400).json({ error: 'Telefone inválido.' });
+
+  const last9 = phone.slice(-9);
+  const orders = db.prepare(`
+    SELECT id, order_number, customer_name, total, payment_method, order_status, created_at
+    FROM orders
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')',''),'+','') LIKE ?
+    ORDER BY created_at DESC
+    LIMIT 15
+  `).all(`%${last9}`);
+
+  res.json(orders);
+});
+
 // GET /api/orders/:id
 router.get('/orders/:id', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);

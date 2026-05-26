@@ -32,8 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── FORM PERSISTENCE ──────────────────────────────────────────────────────────────
 
+let orderCity = 'São Paulo';
+
 function setupFormPersistence() {
-  ['customerName','customerPhone','street','houseNumber','complement','neighborhood','reference','notes'].forEach(id => {
+  ['customerName','customerPhone','cep','street','houseNumber','complement','neighborhood','reference','notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', saveForm);
   });
@@ -41,11 +43,12 @@ function setupFormPersistence() {
 
 function saveForm() {
   const data = {};
-  ['customerName','customerPhone','street','houseNumber','complement','neighborhood','reference','notes'].forEach(id => {
+  ['customerName','customerPhone','cep','street','houseNumber','complement','neighborhood','reference','notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) data[id] = el.value;
   });
   data.paymentMethod = paymentMethod;
+  data.orderCity = orderCity;
   sessionStorage.setItem(FORM_KEY, JSON.stringify(data));
 }
 
@@ -53,10 +56,11 @@ function restoreForm() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(FORM_KEY) || '{}');
     if (!Object.keys(saved).length) return;
-    ['customerName','customerPhone','street','houseNumber','complement','neighborhood','reference','notes'].forEach(id => {
+    ['customerName','customerPhone','cep','street','houseNumber','complement','neighborhood','reference','notes'].forEach(id => {
       const el = document.getElementById(id);
       if (el && saved[id]) el.value = saved[id];
     });
+    if (saved.orderCity) orderCity = saved.orderCity;
     if (saved.paymentMethod) {
       paymentMethod = saved.paymentMethod;
       selectPayment(paymentMethod, false);
@@ -256,13 +260,54 @@ function selectPayment(method, persist = true) {
   if (persist) saveForm();
 }
 
+// ── CEP AUTO-FILL ────────────────────────────────────────────────────────────────
+
+function onCepInput(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 8);
+  if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5);
+  input.value = v;
+  document.getElementById('cepError').style.display = 'none';
+  if (v.replace('-', '').length === 8) buscarCEP(v.replace('-', ''));
+  saveForm();
+}
+
+async function buscarCEP(cep) {
+  const spinner = document.getElementById('cepSpinner');
+  const errEl = document.getElementById('cepError');
+  spinner.style.display = 'block';
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await res.json();
+    if (data.erro) {
+      errEl.textContent = 'CEP não encontrado.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (data.logradouro) document.getElementById('street').value = data.logradouro;
+    if (data.bairro) document.getElementById('neighborhood').value = data.bairro;
+    if (data.localidade) orderCity = data.localidade;
+    document.getElementById('houseNumber').focus();
+    saveForm();
+    showToast(`Endereço encontrado: ${data.localidade || ''}`, 'success');
+  } catch {
+    errEl.textContent = 'Erro ao buscar CEP. Preencha manualmente.';
+    errEl.style.display = 'block';
+  } finally {
+    spinner.style.display = 'none';
+  }
+}
+
 // ── PHONE FORMAT ──────────────────────────────────────────────────────────────────
 
 function formatPhone() {
   const input = document.getElementById('customerPhone');
   if (!input) return;
   input.addEventListener('input', () => {
-    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    let v = input.value.replace(/\D/g, '');
+    // Strip country code 55 (+55 or 55 typed by mistake)
+    if (v.startsWith('55') && v.length > 11) v = v.slice(2);
+    v = v.slice(0, 11);
     if (v.length >= 11) v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
     else if (v.length >= 7) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3');
     else if (v.length >= 3) v = v.replace(/(\d{2})(\d+)/, '($1) $2');
@@ -311,7 +356,7 @@ async function placeOrder() {
     number:         document.getElementById('houseNumber').value.trim(),
     complement:     document.getElementById('complement').value.trim(),
     neighborhood:   document.getElementById('neighborhood').value.trim(),
-    city:           'São Paulo',
+    city:           orderCity,
     reference:      document.getElementById('reference').value.trim(),
     notes:          document.getElementById('notes').value.trim(),
     items:          cart,

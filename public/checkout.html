@@ -37,6 +37,19 @@
             <label>WhatsApp / Telefone *</label>
             <input type="tel" id="customerPhone" placeholder="(11) 99999-9999" autocomplete="tel">
           </div>
+          <div class="form-row" style="align-items:flex-start;">
+            <div class="form-group" style="max-width:180px;">
+              <label>CEP</label>
+              <div style="position:relative;">
+                <input type="text" id="cep" placeholder="00000-000" maxlength="9" autocomplete="postal-code"
+                       oninput="onCepInput(this)" style="padding-right:2.4rem;">
+                <div id="cepSpinner" style="display:none;position:absolute;right:.65rem;top:50%;transform:translateY(-50%);">
+                  <div class="spinner" style="width:15px;height:15px;border-width:2px;"></div>
+                </div>
+              </div>
+              <div id="cepError" style="display:none;font-size:.73rem;color:var(--red);margin-top:.25rem;"></div>
+            </div>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>Rua / Avenida *</label>

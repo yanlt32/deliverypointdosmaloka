@@ -26,6 +26,7 @@ app.use('/api/pagbank', require('./routes/pagbankRoutes'));
 app.get('/menu', (req, res) => res.sendFile(path.join(__dirname, 'public', 'menu.html')));
 app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, 'public', 'checkout.html')));
 app.get('/pedido', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pedido.html')));
+app.get('/meus-pedidos', (req, res) => res.sendFile(path.join(__dirname, 'public', 'meus-pedidos.html')));
 
 // Admin
 app.get('/admin', (req, res) => res.redirect('/admin/login.html'));

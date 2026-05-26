@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Pedidos — Point dos Malokas</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/menu" class="nav-logo">Point.Malokas</a>
+  <ul class="nav-links">
+    <li><a href="/menu">Cardápio</a></li>
+  </ul>
+</nav>
+
+<div class="pedido-page" style="max-width:480px;margin:0 auto;">
+
+  <!-- Phone input state -->
+  <div id="phoneState" style="padding:2rem 1rem;">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="margin-bottom:1rem;">
+        <i data-lucide="smartphone" style="width:56px;height:56px;color:var(--gold);stroke-width:1.5;"></i>
+      </div>
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--white);margin-bottom:.5rem;">Meus Pedidos</h2>
+      <p style="color:var(--gray);font-size:.9rem;">Digite seu número de telefone para ver seus pedidos anteriores.</p>
+    </div>
+
+    <div class="order-card" style="padding:1.5rem;">
+      <label style="display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--gray);margin-bottom:.5rem;">Telefone</label>
+      <div style="display:flex;gap:.75rem;">
+        <input
+          id="phoneInput"
+          type="tel"
+          placeholder="(11) 99999-9999"
+          maxlength="15"
+          style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--white);font-size:1rem;"
+          onkeydown="if(event.key==='Enter') buscarPedidos()"
+          oninput="formatarTelefone(this)"
+        />
+        <button class="btn btn-gold" onclick="buscarPedidos()" style="white-space:nowrap;padding:.75rem 1.25rem;">
+          <i data-lucide="search" style="width:16px;height:16px;vertical-align:middle;"></i>
+        </button>
+      </div>
+      <div id="phoneError" style="display:none;margin-top:.6rem;font-size:.82rem;color:var(--red);"></div>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loadingState" style="display:none;text-align:center;padding:3rem 1rem;">
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto;border-width:3px;"></div>
+    <p style="margin-top:1.25rem;color:var(--gray);">Buscando pedidos...</p>
+  </div>
+
+  <!-- Results state -->
+  <div id="resultsState" style="display:none;padding:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--white);" id="resultsTitle">Seus Pedidos</h3>
+      <button onclick="voltarBusca()" style="background:none;border:none;color:var(--gray);font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;">
+        <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Trocar número
+      </button>
+    </div>
+    <div id="ordersList"></div>
+    <div style="margin-top:1.5rem;text-align:center;">
+      <a href="/menu" class="btn btn-outline btn-block" style="display:flex;align-items:center;justify-content:center;gap:.5rem;">
+        <i data-lucide="shopping-cart" style="width:16px;height:16px;"></i> Fazer Novo Pedido
+      </a>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="emptyState" style="display:none;text-align:center;padding:3rem 1rem;">
+    <i data-lucide="package-x" style="width:56px;height:56px;opacity:.4;margin-bottom:1rem;"></i>
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--white);margin-bottom:.5rem;">Nenhum pedido encontrado</h3>
+    <p style="color:var(--gray);margin-bottom:1.5rem;font-size:.9rem;">Nenhum pedido foi encontrado para esse número.</p>
+    <button onclick="voltarBusca()" class="btn btn-outline">Tentar outro número</button>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/assets/js/cart.js"></script>
+<script src="/assets/js/meus-pedidos.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>
