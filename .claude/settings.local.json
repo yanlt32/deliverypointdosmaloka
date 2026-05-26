@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Start-Sleep -Seconds 2; \\(Invoke-WebRequest -Uri 'http://localhost:3000/api/combos' -UseBasicParsing\\).Content)"
+    ]
+  }
+}
