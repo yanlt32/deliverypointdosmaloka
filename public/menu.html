@@ -17,7 +17,21 @@
     <li><a href="https://wa.me/5511947291983" target="_blank" style="display:flex;align-items:center;gap:.35rem;"><i data-lucide="message-circle" style="width:15px;height:15px;"></i> WhatsApp</a></li>
     <li><a href="https://instagram.com/pointdosmalokas" target="_blank">Instagram</a></li>
   </ul>
+  <button class="nav-mobile-toggle" onclick="toggleMobileMenu(this)" aria-label="Menu">☰</button>
 </nav>
+
+<!-- Mobile nav dropdown -->
+<div id="mobileNav" style="display:none;position:fixed;top:57px;left:0;right:0;z-index:999;background:rgba(8,8,8,.97);border-bottom:1px solid var(--border);padding:.75rem 1.25rem;flex-direction:column;gap:.1rem;">
+  <a href="/meus-pedidos" style="display:flex;align-items:center;gap:.6rem;padding:.7rem .5rem;border-bottom:1px solid var(--border);color:var(--white);font-size:.9rem;font-weight:500;">
+    <i data-lucide="package-search" style="width:17px;height:17px;color:var(--gold);"></i> Meus Pedidos
+  </a>
+  <a href="https://wa.me/5511947291983" target="_blank" style="display:flex;align-items:center;gap:.6rem;padding:.7rem .5rem;border-bottom:1px solid var(--border);color:var(--white);font-size:.9rem;font-weight:500;">
+    <i data-lucide="message-circle" style="width:17px;height:17px;color:var(--gold);"></i> WhatsApp
+  </a>
+  <a href="https://instagram.com/pointdosmalokas" target="_blank" style="display:flex;align-items:center;gap:.6rem;padding:.7rem .5rem;color:var(--white);font-size:.9rem;font-weight:500;">
+    <i data-lucide="instagram" style="width:17px;height:17px;color:var(--gold);"></i> Instagram
+  </a>
+</div>
 
 <!-- Category tabs -->
 <div class="menu-page-header">
@@ -128,6 +142,16 @@ function toggleMobileMenu(btn) {
   nav.style.display = isOpen ? 'none' : 'flex';
   btn.textContent = isOpen ? '☰' : '✕';
 }
+
+// Fecha menu mobile ao clicar fora
+document.addEventListener('click', function(e) {
+  const nav = document.getElementById('mobileNav');
+  const btn = document.querySelector('.nav-mobile-toggle');
+  if (nav && nav.style.display === 'flex' && !nav.contains(e.target) && e.target !== btn) {
+    nav.style.display = 'none';
+    if (btn) btn.textContent = '☰';
+  }
+});
 </script>
 </body>
 </html>
