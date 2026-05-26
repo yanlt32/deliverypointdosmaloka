@@ -13,6 +13,8 @@ const MAX_FREE_OPTIONS = 5;
 let comboAcaiCount = 1;
 let comboAcaiIndex = 0;
 let selectedOptionsArray = [{}];
+let comboModalFreeLimit = MAX_FREE_OPTIONS; // overridden per combo type
+let comboModalType = 'acai'; // 'acai' | 'pastel'
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -165,17 +167,37 @@ function renderComboSection() {
     </div>`;
 }
 
+function detectComboConfig(combo) {
+  const text = (combo.name + ' ' + (combo.description || '')).toLowerCase();
+
+  if (/açaí|acai/i.test(text)) {
+    let acaiCount = 1;
+    if (/dois|2\s*x?\s*açaí|dois açaís/i.test(text)) acaiCount = 2;
+    if (/três|3\s*x?\s*açaí|três açaís/i.test(text)) acaiCount = 3;
+    return { type: 'acai', acaiCount, freeLimit: MAX_FREE_OPTIONS };
+  }
+
+  if (/pastel/i.test(text)) {
+    const m = text.match(/(\d+)\s*past/i);
+    const count = m ? parseInt(m[1]) : 6;
+    return { type: 'pastel', acaiCount: 1, freeLimit: count };
+  }
+
+  return null; // add directly to cart
+}
+
 function addComboToCart(comboId) {
   const combo = combosData.find(c => c.id === comboId);
   if (!combo) return;
 
-  if (/açaí|acai/i.test(combo.name)) {
-    openComboModal(combo);
+  const config = detectComboConfig(combo);
+  if (config) {
+    openComboModal(combo, config);
     return;
   }
 
   const price = combo.type === 'free' ? 0 : parseFloat(combo.price);
-  const item = {
+  addItem({
     productId: `combo-${combo.id}`,
     productName: combo.name,
     variant: null,
@@ -184,18 +206,9 @@ function addComboToCart(comboId) {
     unitPrice: price,
     qty: 1,
     subtotal: price,
-  };
-
-  addItem(item);
+  });
   renderCartUI();
   showToast(`${combo.name} adicionado!`);
-}
-
-function detectAcaiCount(combo) {
-  const text = (combo.name + ' ' + (combo.description || '')).toLowerCase();
-  if (/dois|2\s*x?\s*açaí|dois açaís/i.test(text)) return 2;
-  if (/três|3\s*x?\s*açaí|três açaís/i.test(text)) return 3;
-  return 1;
 }
 
 function buildAcaiOptionsHtml(acaiCat) {
@@ -222,12 +235,41 @@ function buildAcaiOptionsHtml(acaiCat) {
   return html;
 }
 
+function buildPastelOptionsHtml() {
+  const pastelCat = menuData.find(c => /pastel/i.test(c.slug || c.name));
+  if (!pastelCat) return '';
+  // Get options from any pastel product that has options
+  const prodWithOpts = pastelCat.products.find(p => p.has_options && p.options && Object.keys(p.options).length);
+  if (!prodWithOpts) return '';
+
+  let html = '';
+  Object.entries(prodWithOpts.options).forEach(([group, optList]) => {
+    html += `<div class="options-group">
+      <div class="options-group-title">${group}</div>
+      <div class="options-list">${optList.map(opt => {
+        const isSel = selectedOptions[group]?.some(o => o.name === opt.name);
+        return `<div class="option-chip${isSel ? ' selected' : ''}"
+             onclick="toggleOption('${group}', '${opt.name}', ${opt.price}, this)"
+             data-group="${group}" data-name="${opt.name}" data-price="${opt.price}">
+          ${opt.name}
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
 function buildComboModalBody(combo, acaiCat) {
+  const limit = comboModalFreeLimit;
+  const label = comboModalType === 'pastel'
+    ? `pastéis escolhidos — escolha ${limit}`
+    : 'opções gratuitas selecionadas';
+
   let html = `<div id="freeOptionsCounter" style="text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.45rem 1rem;margin-bottom:.75rem;font-size:.82rem;color:var(--gray);">
-    <span id="freeCountText">0</span>/${MAX_FREE_OPTIONS} opções gratuitas selecionadas
+    <span id="freeCountText">0</span>/${limit} ${label}
   </div>`;
 
-  if (comboAcaiCount > 1) {
+  if (comboModalType === 'acai' && comboAcaiCount > 1) {
     const tabs = Array.from({length: comboAcaiCount}, (_, i) =>
       `<button class="menu-cat-btn${i === comboAcaiIndex ? ' active' : ''}"
                onclick="switchAcaiTab(${i})" style="font-size:.82rem;padding:.4rem .9rem;">
@@ -236,7 +278,10 @@ function buildComboModalBody(combo, acaiCat) {
     html += `<div style="display:flex;gap:.5rem;margin-bottom:.75rem;">${tabs}</div>`;
   }
 
-  const optionsHtml = buildAcaiOptionsHtml(acaiCat);
+  const optionsHtml = comboModalType === 'pastel'
+    ? buildPastelOptionsHtml()
+    : buildAcaiOptionsHtml(acaiCat);
+
   if (!optionsHtml) {
     html += `<div style="text-align:center;color:var(--gray);padding:1rem;">
       <p>${combo.description || 'Clique em adicionar para incluir no pedido.'}</p>
@@ -257,15 +302,17 @@ function switchAcaiTab(index) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function openComboModal(combo) {
+function openComboModal(combo, config) {
   currentCombo = combo;
   currentProduct = null;
   selectedVariant = null;
 
-  comboAcaiCount = detectAcaiCount(combo);
-  comboAcaiIndex = 0;
+  comboModalType      = config.type;
+  comboModalFreeLimit = config.freeLimit;
+  comboAcaiCount      = config.acaiCount || 1;
+  comboAcaiIndex      = 0;
   selectedOptionsArray = Array.from({length: comboAcaiCount}, () => ({}));
-  selectedOptions = selectedOptionsArray[0];
+  selectedOptions      = selectedOptionsArray[0];
   qty = 1;
 
   document.getElementById('modalProductName').textContent = combo.name;
@@ -411,8 +458,12 @@ function toggleOption(group, name, price, el) {
     selectedOptions[group].splice(idx, 1);
     el.classList.remove('selected');
   } else {
-    if (parseFloat(price) === 0 && countFreeOptions(selectedOptions) >= MAX_FREE_OPTIONS) {
-      showToast(`Máximo de ${MAX_FREE_OPTIONS} opções gratuitas por açaí!`, 'error');
+    const freeLimit = currentCombo ? comboModalFreeLimit : MAX_FREE_OPTIONS;
+    if (parseFloat(price) === 0 && countFreeOptions(selectedOptions) >= freeLimit) {
+      const msg = comboModalType === 'pastel'
+        ? `Máximo de ${freeLimit} pastéis no combo!`
+        : `Máximo de ${freeLimit} opções gratuitas por açaí!`;
+      showToast(msg, 'error');
       return;
     }
     selectedOptions[group].push({ name, price: parseFloat(price) });
@@ -467,8 +518,17 @@ function addToCart() {
   const price = getModalItemPrice();
 
   if (currentCombo) {
-    // Validate: all açaís must have at least one option chosen
-    if (comboAcaiCount > 1) {
+    // Validação para pastel: precisa escolher todos os recheios
+    if (comboModalType === 'pastel') {
+      const chosen = countFreeOptions(selectedOptions);
+      if (chosen < comboModalFreeLimit) {
+        showToast(`Escolha mais ${comboModalFreeLimit - chosen} pastel(is)!`, 'error');
+        return;
+      }
+    }
+
+    // Validação para açaí múltiplo: todos devem ser montados
+    if (comboModalType === 'acai' && comboAcaiCount > 1) {
       const emptyIdx = selectedOptionsArray.findIndex(opts =>
         Object.values(opts).flat().length === 0
       );
