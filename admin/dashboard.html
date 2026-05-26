@@ -58,9 +58,12 @@
     <div id="tabOrders">
       <div class="page-header">
         <h1 class="page-title">PEDIDOS</h1>
-        <div style="display:flex;gap:.5rem;align-items:center;">
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
           <input type="date" id="ordersDateFilter" class="form-control" style="width:auto;" onchange="loadOrders()">
           <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ Atualizar</button>
+          <button class="btn btn-ghost btn-sm" onclick="openClientSearch()" style="display:flex;align-items:center;gap:.35rem;">
+            <i data-lucide="search" style="width:13px;height:13px;"></i> Buscar Cliente
+          </button>
           <a href="https://wa.me/5511947291983" target="_blank" class="btn btn-gold btn-sm">📲 WhatsApp</a>
         </div>
       </div>
@@ -244,6 +247,27 @@
     <div class="modal-box-footer">
       <button class="btn btn-ghost" onclick="closeComboModal()">Cancelar</button>
       <button class="btn btn-gold" onclick="saveCombo()">Salvar Combo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client search modal -->
+<div class="modal-overlay" id="clientSearchModal" onclick="if(event.target===this)closeClientSearch()">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-box-header">
+      <h3 class="modal-box-title">
+        <i data-lucide="search" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;"></i>Buscar Pedido do Cliente
+      </h3>
+      <button class="modal-box-close" onclick="closeClientSearch()">✕</button>
+    </div>
+    <div class="modal-box-body">
+      <div style="display:flex;gap:.5rem;margin-bottom:1.25rem;">
+        <input type="text" id="clientSearchInput" class="form-control"
+               placeholder="Telefone, nome ou número do pedido (ex: PDM-123456)"
+               onkeydown="if(event.key==='Enter')doClientSearch()">
+        <button class="btn btn-gold" onclick="doClientSearch()" id="clientSearchBtn">Buscar</button>
+      </div>
+      <div id="clientSearchResults"></div>
     </div>
   </div>
 </div>

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Start-Sleep -Seconds 2; \\(Invoke-WebRequest -Uri 'http://localhost:3000/api/combos' -UseBasicParsing\\).Content)"
+      "PowerShell(Start-Sleep -Seconds 2; \\(Invoke-WebRequest -Uri 'http://localhost:3000/api/combos' -UseBasicParsing\\).Content)",
+      "PowerShell($token = \\(\\(Invoke-WebRequest -Uri 'http://localhost:3000/api/admin/login' -Method Post -ContentType 'application/json' -Body '{\"username\":\"admin\",\"password\":\"pointmalokas2025\"}' -UseBasicParsing\\).Content | ConvertFrom-Json\\).token; $h = @{Authorization=\"Bearer $token\"}; \\(Invoke-WebRequest -Uri 'http://localhost:3000/api/admin/orders/search?q=PDM' -Headers $h -UseBasicParsing\\).Content | ConvertFrom-Json | Select-Object -First 3 | ForEach-Object { \"$\\($_.order_number\\) — $\\($_.customer_name\\) — $\\($_.order_status\\)\" })",
+      "PowerShell(Stop-Process -Name node -Force -ErrorAction SilentlyContinue)"
     ]
   }
 }

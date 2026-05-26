@@ -45,6 +45,27 @@ router.get('/orders', (req, res) => {
   res.json(orders);
 });
 
+// GET /api/admin/orders/search?q=... (must come before /:id routes)
+router.get('/orders/search', (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 3) return res.status(400).json({ error: 'Mínimo 3 caracteres.' });
+
+  const digit = q.replace(/\D/g, '');
+  const last9 = digit.slice(-9);
+
+  const orders = db.prepare(`
+    SELECT * FROM orders
+    WHERE order_number LIKE ?
+       OR customer_name LIKE ?
+       OR (? != '' AND REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','') LIKE ?)
+    ORDER BY created_at DESC
+    LIMIT 25
+  `).all(`%${q}%`, `%${q}%`, last9, `%${last9}`);
+
+  orders.forEach(o => { o.items = JSON.parse(o.items_json || '[]'); delete o.items_json; });
+  res.json(orders);
+});
+
 // PATCH /api/admin/orders/:id/status
 router.patch('/orders/:id/status', (req, res) => {
   const { status } = req.body;

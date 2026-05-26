@@ -46,9 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function startPolling() {
   clearInterval(pollTimer);
+  // Reload orders from API every 30s
   pollTimer = setInterval(() => {
     if (currentTab === 'orders') loadOrders(false);
   }, 30000);
+  // Re-render time-ago labels every 60s without hitting the API
+  setInterval(() => {
+    if (currentTab === 'orders' && allOrders.length) renderOrders();
+  }, 60000);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────────
@@ -142,11 +147,13 @@ function filterOrders(status, btn) {
 }
 
 function renderOrders() {
-  const filtered = ordersFilter === 'todos'
+  const base = ordersFilter === 'todos'
     ? allOrders
     : allOrders.filter(o => o.order_status === ordersFilter);
 
+  const filtered = sortOrders(base);
   const container = document.getElementById('ordersList');
+
   if (!filtered.length) {
     container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Nenhum pedido encontrado.</p></div>';
     return;
@@ -154,16 +161,22 @@ function renderOrders() {
 
   container.innerHTML = filtered.map(order => {
     const isNew = order.order_status === 'novo';
+    const urg   = urgencyLevel(order);
+    const urgClass = urg === 2 ? 'overdue' : urg === 1 ? 'warning' : isNew ? 'new' : '';
+    const ago   = timeAgo(order.created_at);
+    const agoClass = urg === 2 ? 'red' : urg === 1 ? 'amber' : '';
+
     const addr = [order.street, order.number, order.complement, order.neighborhood].filter(Boolean).join(', ');
     const items = order.items || [];
     const preview = items.slice(0, 2).map(i => i.productName).join(', ') + (items.length > 2 ? ` +${items.length - 2}` : '');
 
     return `
-      <div class="order-row ${isNew ? 'new' : ''}" onclick="openOrderDetail('${order.id}')">
+      <div class="order-row ${urgClass}" onclick="openOrderDetail('${order.id}')">
         <div>
           <div class="order-num">${order.order_number}</div>
           <div class="order-time">${formatTime(order.created_at)}</div>
-          <div style="margin-top:.4rem;">${statusBadge(order.order_status)}</div>
+          <div class="time-ago-tag ${agoClass}">${ico('clock', 10)} ${ago}</div>
+          <div style="margin-top:.3rem;">${statusBadge(order.order_status)}</div>
         </div>
         <div>
           <div class="order-customer-name">${ico('user',13)} ${order.customer_name}</div>
@@ -177,12 +190,12 @@ function renderOrders() {
         </div>
         <div onclick="event.stopPropagation();">
           <select class="status-select" onchange="updateOrderStatus('${order.id}', this.value, this)">
-            <option value="novo" ${order.order_status === 'novo' ? 'selected' : ''}>Novo</option>
+            <option value="novo"       ${order.order_status === 'novo'       ? 'selected' : ''}>Novo</option>
             <option value="confirmado" ${order.order_status === 'confirmado' ? 'selected' : ''}>Confirmado</option>
             <option value="preparando" ${order.order_status === 'preparando' ? 'selected' : ''}>Preparando</option>
-            <option value="saiu" ${order.order_status === 'saiu' ? 'selected' : ''}>Saiu para entrega</option>
-            <option value="entregue" ${order.order_status === 'entregue' ? 'selected' : ''}>Entregue</option>
-            <option value="cancelado" ${order.order_status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+            <option value="saiu"       ${order.order_status === 'saiu'       ? 'selected' : ''}>Saiu para entrega</option>
+            <option value="entregue"   ${order.order_status === 'entregue'   ? 'selected' : ''}>Entregue</option>
+            <option value="cancelado"  ${order.order_status === 'cancelado'  ? 'selected' : ''}>Cancelado</option>
           </select>
         </div>
       </div>`;
@@ -682,6 +695,113 @@ function renderReports(data) {
         ${summary.total_orders > 0 ? formatBRL((summary.total_revenue || 0) / summary.total_orders) : 'R$ 0,00'}
       </span>
     </div>`;
+}
+
+// ── CLIENT SEARCH ─────────────────────────────────────────────────────────────────
+function openClientSearch() {
+  document.getElementById('clientSearchInput').value = '';
+  document.getElementById('clientSearchResults').innerHTML = '';
+  document.getElementById('clientSearchModal').classList.add('open');
+  setTimeout(() => document.getElementById('clientSearchInput').focus(), 100);
+}
+
+function closeClientSearch() {
+  document.getElementById('clientSearchModal').classList.remove('open');
+}
+
+async function doClientSearch() {
+  const q = document.getElementById('clientSearchInput').value.trim();
+  if (!q) return;
+
+  const btn = document.getElementById('clientSearchBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+  document.getElementById('clientSearchResults').innerHTML =
+    '<div style="text-align:center;padding:1.5rem;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+
+  try {
+    const res = await apiFetch(`/orders/search?q=${encodeURIComponent(q)}`);
+    const orders = await res.json();
+    if (!res.ok) throw new Error(orders.error || 'Erro');
+    renderClientSearchResults(orders);
+  } catch (e) {
+    showToast(e.message || 'Erro na busca.', 'error');
+    document.getElementById('clientSearchResults').innerHTML =
+      '<div style="text-align:center;color:var(--gray);padding:1rem;">Nenhum pedido encontrado.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buscar';
+  }
+}
+
+function renderClientSearchResults(orders) {
+  const el = document.getElementById('clientSearchResults');
+  if (!orders.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.5rem;">Nenhum pedido encontrado.</div>';
+    return;
+  }
+
+  el.innerHTML = `<div style="font-size:.72rem;color:var(--gray);margin-bottom:.75rem;">${orders.length} pedido(s) encontrado(s)</div>` +
+    orders.map(order => `
+      <div class="client-search-result" onclick="openOrderFromSearch(${JSON.stringify(order).replace(/"/g,'&quot;')})">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold);">${order.order_number}</div>
+          <div style="font-size:.7rem;color:var(--gray);">${formatDateFull(order.created_at)}</div>
+        </div>
+        <div>
+          <div style="font-weight:600;color:var(--white);font-size:.88rem;">${order.customer_name}</div>
+          <div style="font-size:.75rem;color:var(--gray);">${order.customer_phone}</div>
+        </div>
+        <div>${statusBadge(order.order_status)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--gold);text-align:right;">${formatBRL(order.total)}</div>
+      </div>`).join('');
+  refreshIcons();
+}
+
+function openOrderFromSearch(order) {
+  if (!allOrders.find(o => o.id === order.id)) allOrders.push(order);
+  closeClientSearch();
+  openOrderDetail(order.id);
+}
+
+// ── ORDER URGENCY & SORTING ────────────────────────────────────────────────────────
+function parseLocalDate(s) {
+  if (!s) return new Date();
+  const [date, time] = s.split(' ');
+  return new Date(`${date}T${time || '00:00:00'}`);
+}
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - parseLocalDate(dateStr)) / 60000);
+  if (diff < 1) return 'agora';
+  if (diff < 60) return `${diff}min`;
+  const h = Math.floor(diff / 60), m = diff % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+
+const ACTIVE_STATUSES = new Set(['novo', 'confirmado', 'preparando', 'saiu']);
+
+function urgencyLevel(order) {
+  if (!ACTIVE_STATUSES.has(order.order_status)) return 0;
+  const mins = Math.floor((Date.now() - parseLocalDate(order.created_at)) / 60000);
+  if (mins >= 45) return 2;
+  if (mins >= 20) return 1;
+  return 0;
+}
+
+function sortOrders(orders) {
+  const w = { novo: 0, confirmado: 1, preparando: 2, saiu: 3, entregue: 4, cancelado: 5 };
+  return [...orders].sort((a, b) => {
+    const aAct = ACTIVE_STATUSES.has(a.order_status);
+    const bAct = ACTIVE_STATUSES.has(b.order_status);
+    if (aAct !== bAct) return aAct ? -1 : 1;
+    if (aAct) {
+      // Active: oldest first so nothing is forgotten
+      return parseLocalDate(a.created_at) - parseLocalDate(b.created_at);
+    }
+    // Completed: newest first
+    return parseLocalDate(b.created_at) - parseLocalDate(a.created_at);
+  });
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────────
