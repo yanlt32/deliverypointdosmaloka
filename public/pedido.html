@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acompanhar Pedido — Point dos Malokas</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">Point.Malokas</a>
+</nav>
+
+<div class="pedido-page">
+
+  <!-- Loading state -->
+  <div id="loadingState" style="text-align:center;padding:4rem 1rem;">
+    <div class="spinner" style="width:48px;height:48px;margin:0 auto;border-width:3px;"></div>
+    <p style="margin-top:1.5rem;color:var(--gray);">Buscando seu pedido...</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="errorState" class="hidden" style="text-align:center;padding:4rem 1rem;">
+    <div style="font-size:4rem;margin-bottom:1rem;"><i data-lucide="search-x" style="width:64px;height:64px;opacity:.5;"></i></div>
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--white);margin-bottom:.75rem;">Pedido não encontrado</h3>
+    <p style="color:var(--gray);margin-bottom:2rem;">Verifique o link ou entre em contato conosco.</p>
+    <a href="https://wa.me/5511947291983" target="_blank" class="btn btn-gold">WhatsApp (11) 94729-1983</a>
+  </div>
+
+  <!-- Order content -->
+  <div id="orderContent" class="hidden">
+
+    <!-- Order header card -->
+    <div class="order-card">
+      <div class="order-card-header">
+        <div class="order-number-label">Número do Pedido</div>
+        <div class="order-number-value" id="orderNumber">---</div>
+        <div id="orderStatusBadge" class="order-status-badge status-novo">● Novo pedido</div>
+        <div style="font-size:.8rem;color:var(--gray);margin-top:.5rem;" id="orderCreatedAt"></div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="order-timeline">
+        <h4 style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gray);margin-bottom:1.5rem;">Status do Pedido</h4>
+        <div class="timeline" id="orderTimeline"></div>
+      </div>
+
+      <!-- Customer info -->
+      <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
+        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--white);margin-bottom:1rem;">Dados de Entrega</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;" id="customerInfo"></div>
+      </div>
+
+      <!-- Items -->
+      <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
+        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--white);margin-bottom:1rem;">Itens do Pedido</h4>
+        <div id="orderItems"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+          <span style="font-weight:700;color:var(--white);">Total</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--gold);" id="orderTotal"></span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:1.5rem;display:flex;flex-direction:column;gap:.75rem;">
+        <a id="whatsappOrderBtn" href="#" target="_blank" class="btn btn-gold btn-block" style="display:flex;align-items:center;justify-content:center;gap:.5rem;">
+          <i data-lucide="message-circle" style="width:16px;height:16px;"></i> Falar com a Loja no WhatsApp
+        </a>
+        <a href="/menu" class="btn btn-outline btn-block" style="display:flex;align-items:center;justify-content:center;gap:.5rem;">
+          <i data-lucide="shopping-cart" style="width:16px;height:16px;"></i> Fazer Novo Pedido
+        </a>
+      </div>
+    </div>
+
+    <p style="text-align:center;font-size:.78rem;color:var(--gray);margin-top:.5rem;">
+      Esta página atualiza automaticamente a cada 30 segundos
+    </p>
+
+  </div>
+</div>
+
+<script src="/assets/js/pedido.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

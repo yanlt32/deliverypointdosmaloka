@@ -1,0 +1,7 @@
+node_modules/
+.env
+database/delivery.db
+database/delivery.db-wal
+database/delivery.db-shm
+*.db-journal
+test-*.json

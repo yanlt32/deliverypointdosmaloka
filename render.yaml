@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: point-dos-malokas
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PIX_KEY
+        value: +5511947291983
+      - key: PIX_MERCHANT_NAME
+        value: Point dos Malokas
+      - key: PIX_MERCHANT_CITY
+        value: Sao Paulo
+      - key: PAGBANK_LINK
+        value: https://pagbank.com.br/pointdosmalokas
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        sync: false

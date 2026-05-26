@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Point dos Malokas</title>
+  <link rel="stylesheet" href="/admin/assets/css/admin.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<div class="admin-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">Point.Malokas</div>
+      <div class="sidebar-subtitle">Painel Admin</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showTab('orders')" id="navOrders">
+        <span class="nav-icon"><i data-lucide="package"></i></span>
+        <span>Pedidos</span>
+        <span class="nav-badge hidden" id="newOrdersBadge">0</span>
+      </button>
+      <button class="nav-item" onclick="showTab('menu')" id="navMenu">
+        <span class="nav-icon"><i data-lucide="utensils"></i></span>
+        <span>Cardápio</span>
+      </button>
+      <button class="nav-item" onclick="showTab('combos')" id="navCombos">
+        <span class="nav-icon"><i data-lucide="gift"></i></span>
+        <span>Combos</span>
+      </button>
+      <button class="nav-item" onclick="showTab('reports')" id="navReports">
+        <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>
+        <span>Relatórios</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="avatarLetter">A</div>
+        <div>
+          <div class="sidebar-username" id="usernameDisplay">admin</div>
+          <button class="btn-logout" onclick="logout()">Sair</button>
+        </div>
+      </div>
+      <a href="/" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:.4rem;font-size:.72rem;color:var(--gray);margin-top:.75rem;text-align:center;transition:color .15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--gray)'">
+        <i data-lucide="external-link" style="width:12px;height:12px;"></i> Ver site
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- ── ORDERS TAB ────────────────────────────────── -->
+    <div id="tabOrders">
+      <div class="page-header">
+        <h1 class="page-title">PEDIDOS</h1>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <input type="date" id="ordersDateFilter" class="form-control" style="width:auto;" onchange="loadOrders()">
+          <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ Atualizar</button>
+          <a href="https://wa.me/5511947291983" target="_blank" class="btn btn-gold btn-sm">📲 WhatsApp</a>
+        </div>
+      </div>
+      <div class="page-content">
+        <!-- Stats -->
+        <div class="stats-grid" id="ordersStats"></div>
+
+        <!-- Filters -->
+        <div class="orders-filters">
+          <button class="filter-btn active" onclick="filterOrders('todos', this)">Todos</button>
+          <button class="filter-btn" onclick="filterOrders('novo', this)">Novos</button>
+          <button class="filter-btn" onclick="filterOrders('confirmado', this)">Confirmados</button>
+          <button class="filter-btn" onclick="filterOrders('preparando', this)">Preparando</button>
+          <button class="filter-btn" onclick="filterOrders('saiu', this)">Saiu</button>
+          <button class="filter-btn" onclick="filterOrders('entregue', this)">Entregues</button>
+          <button class="filter-btn" onclick="filterOrders('cancelado', this)">Cancelados</button>
+        </div>
+
+        <div id="ordersList" class="orders-list">
+          <div class="empty-state"><div class="spinner" style="width:36px;height:36px;margin:0 auto;"></div><p style="margin-top:1rem;">Carregando...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MENU TAB ──────────────────────────────────── -->
+    <div id="tabMenu" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">CARDÁPIO</h1>
+        <button class="btn btn-gold btn-sm" onclick="openProductModal()">+ Novo Produto</button>
+      </div>
+      <div class="page-content">
+        <div id="productsList"></div>
+      </div>
+    </div>
+
+    <!-- ── COMBOS TAB ─────────────────────────────────── -->
+    <div id="tabCombos" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">COMBOS</h1>
+        <button class="btn btn-gold btn-sm" onclick="openComboModal()">+ Novo Combo</button>
+      </div>
+      <div class="page-content">
+        <div id="combosList"></div>
+      </div>
+    </div>
+
+    <!-- ── REPORTS TAB ────────────────────────────────── -->
+    <div id="tabReports" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">RELATÓRIOS</h1>
+        <div style="display:flex;gap:.5rem;">
+          <button class="filter-btn active" onclick="loadReports('today', this)">Hoje</button>
+          <button class="filter-btn" onclick="loadReports('week', this)">7 dias</button>
+          <button class="filter-btn" onclick="loadReports('month', this)">30 dias</button>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="stats-grid" id="reportStats" style="grid-template-columns:repeat(4,1fr);"></div>
+        <div class="reports-grid">
+          <div class="report-card" style="grid-column:1/-1;">
+            <h4>Pedidos por Dia</h4>
+            <div id="reportByDay"></div>
+          </div>
+          <div class="report-card">
+            <h4>Por Forma de Pagamento</h4>
+            <div id="reportByPayment"></div>
+          </div>
+          <div class="report-card">
+            <h4>Resumo</h4>
+            <div id="reportSummary"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Order detail panel -->
+<div class="detail-panel" id="orderDetailPanel">
+  <div class="detail-header">
+    <h3 style="font-size:1.2rem;color:var(--white);">Detalhes do Pedido</h3>
+    <button onclick="closeDetailPanel()" style="background:none;border:none;color:var(--gray);font-size:1.3rem;cursor:pointer;">✕</button>
+  </div>
+  <div id="orderDetailContent" style="padding:1.5rem;flex:1;overflow-y:auto;"></div>
+</div>
+
+<!-- Product modal -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 class="modal-box-title" id="productModalTitle">Novo Produto</h3>
+      <button class="modal-box-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="modal-box-body">
+      <input type="hidden" id="productEditId">
+      <div class="form-group">
+        <label>Categoria *</label>
+        <select id="productCategory" class="form-control">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" id="productName" class="form-control" placeholder="Ex: Açaí Tradicional">
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="productDesc" class="form-control" placeholder="Breve descrição">
+      </div>
+      <div class="form-group">
+        <label>Tem variações de tamanho?</label>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-top:.4rem;">
+          <label class="switch"><input type="checkbox" id="productHasVariants" onchange="toggleVariantsUI()"><span class="switch-slider"></span></label>
+          <span style="font-size:.82rem;color:var(--gray);">Ex: 300ml, 400ml...</span>
+        </div>
+      </div>
+      <div id="variantsSection" class="hidden">
+        <div class="form-group">
+          <label>Variações (nome + preço)</label>
+          <div id="variantsList"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addVariantRow()" style="margin-top:.5rem;">+ Adicionar variação</button>
+        </div>
+      </div>
+      <div id="basePriceSection">
+        <div class="form-group">
+          <label>Preço (R$) *</label>
+          <input type="number" id="productPrice" class="form-control" placeholder="0.00" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Ativo</label>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-top:.4rem;">
+          <label class="switch"><input type="checkbox" id="productActive" checked><span class="switch-slider"></span></label>
+          <span style="font-size:.82rem;color:var(--gray);">Visível no cardápio</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-box-footer">
+      <button class="btn btn-ghost" onclick="closeProductModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveProduct()">Salvar Produto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Combo modal -->
+<div class="modal-overlay" id="comboModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 class="modal-box-title" id="comboModalTitle">Novo Combo</h3>
+      <button class="modal-box-close" onclick="closeComboModal()">✕</button>
+    </div>
+    <div class="modal-box-body">
+      <input type="hidden" id="comboEditId">
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" id="comboName" class="form-control" placeholder="Ex: Combo Black Label">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tag</label>
+          <input type="text" id="comboTag" class="form-control" placeholder="Ex: 👑 Elite">
+        </div>
+        <div class="form-group">
+          <label>Preço (R$) *</label>
+          <input type="number" id="comboPrice" class="form-control" placeholder="0.00" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea id="comboDesc" class="form-control" rows="3" placeholder="Descreva os itens do combo..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Ativo</label>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-top:.4rem;">
+          <label class="switch"><input type="checkbox" id="comboActive" checked><span class="switch-slider"></span></label>
+          <span style="font-size:.82rem;color:var(--gray);">Visível no cardápio</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-box-footer">
+      <button class="btn btn-ghost" onclick="closeComboModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveCombo()">Salvar Combo</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-item active" data-tab="orders" onclick="showTab('orders')">
+    <i data-lucide="package"></i>
+    <span>Pedidos</span>
+    <span class="mobile-nav-badge hidden" id="mobileOrdersBadge">0</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="menu" onclick="showTab('menu')">
+    <i data-lucide="utensils"></i>
+    <span>Cardápio</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="combos" onclick="showTab('combos')">
+    <i data-lucide="gift"></i>
+    <span>Combos</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="reports" onclick="showTab('reports')">
+    <i data-lucide="bar-chart-2"></i>
+    <span>Relatórios</span>
+  </button>
+</nav>
+
+<script src="/admin/assets/js/admin.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

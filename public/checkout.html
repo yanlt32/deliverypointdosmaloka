@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finalizar Pedido — Point dos Malokas</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/menu" class="nav-logo">Point.Malokas</a>
+  <ul class="nav-links">
+    <li><a href="/menu">← Voltar ao Cardápio</a></li>
+  </ul>
+</nav>
+
+<div class="checkout-page">
+  <div style="max-width:1000px;margin:0 auto;">
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,3.5rem);color:var(--white);margin-bottom:2rem;">
+      FINALIZAR PEDIDO
+    </h1>
+
+    <div class="checkout-grid">
+      <!-- Form side -->
+      <div>
+        <!-- Dados de entrega -->
+        <div class="checkout-form-section">
+          <h3 class="checkout-form-title"><i data-lucide="map-pin" style="width:17px;height:17px;"></i> Dados para Entrega</h3>
+          <div class="form-group">
+            <label>Nome completo *</label>
+            <input type="text" id="customerName" placeholder="Seu nome" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label>WhatsApp / Telefone *</label>
+            <input type="tel" id="customerPhone" placeholder="(11) 99999-9999" autocomplete="tel">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Rua / Avenida *</label>
+              <input type="text" id="street" placeholder="Nome da rua" autocomplete="address-line1">
+            </div>
+            <div class="form-group">
+              <label>Número *</label>
+              <input type="text" id="houseNumber" placeholder="Ex: 346" style="max-width:140px;">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Complemento</label>
+              <input type="text" id="complement" placeholder="Apto, casa, bloco..." autocomplete="address-line2">
+            </div>
+            <div class="form-group">
+              <label>Bairro *</label>
+              <input type="text" id="neighborhood" placeholder="Ex: Vila Nhocuné" autocomplete="address-level3">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Ponto de referência</label>
+            <input type="text" id="reference" placeholder="Ex: próximo ao mercado X, portão azul...">
+          </div>
+          <div class="form-group">
+            <label>Observações do pedido</label>
+            <textarea id="notes" placeholder="Alguma observação? Ex: sem cebola, ponto da carne..."></textarea>
+          </div>
+        </div>
+
+        <!-- Pagamento -->
+        <div class="checkout-form-section">
+          <h3 class="checkout-form-title"><i data-lucide="credit-card" style="width:17px;height:17px;"></i> Forma de Pagamento</h3>
+          <div class="payment-methods">
+            <label class="payment-option selected" id="optPix" onclick="selectPayment('pix')">
+              <input type="radio" name="payment" value="pix" checked>
+              <div class="payment-icon"><i data-lucide="smartphone"></i></div>
+              <div class="payment-name">Pix</div>
+              <div class="payment-desc">Pague agora — confirmação automática</div>
+            </label>
+            <label class="payment-option" id="optDinheiro" onclick="selectPayment('dinheiro')">
+              <input type="radio" name="payment" value="dinheiro">
+              <div class="payment-icon"><i data-lucide="banknote"></i></div>
+              <div class="payment-name">Dinheiro / Cartão</div>
+              <div class="payment-desc">Pague na entrega</div>
+            </label>
+          </div>
+
+          <!-- Pix display — shown after order is placed -->
+          <div class="pix-display" id="pixDisplay">
+            <h4>✅ Pedido Realizado!</h4>
+            <p style="font-size:.85rem;color:var(--gray);margin-bottom:1.5rem;">
+              Escaneie o QR Code ou copie a chave Pix para pagar:
+            </p>
+
+            <div class="pix-qr">
+              <img id="pixQrImg" src="" alt="QR Code Pix" style="width:100%;border-radius:8px;">
+            </div>
+
+            <div class="pix-key-box">
+              <span class="pix-key-value" id="pixKeyValue"></span>
+              <button class="btn-copy" onclick="copyPixKey()">Copiar</button>
+            </div>
+
+            <div class="pix-hint" style="margin-bottom:1.25rem;">
+              <strong>Como pagar:</strong> Abra o app do seu banco → Pix → Escanear QR Code ou Pix Copia e Cola → Cole o código acima.
+            </div>
+
+            <!-- Payment detection indicator -->
+            <div id="pixWaiting" style="display:flex;align-items:center;gap:.6rem;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:var(--gray);">
+              <div class="spinner" style="width:16px;height:16px;flex-shrink:0;"></div>
+              <span>Aguardando confirmação do pagamento... a página atualiza automaticamente.</span>
+            </div>
+
+            <a id="whatsappPixBtn" href="#" target="_blank" class="btn btn-dark btn-block">
+              📲 Confirmar Pagamento no WhatsApp
+            </a>
+          </div>
+
+          <!-- Dinheiro info -->
+          <div id="dinheiroInfo" style="display:none;margin-top:1rem;background:var(--dark);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
+            <p style="font-size:.88rem;color:var(--gray);">
+              💡 <strong style="color:var(--white);">Pagamento na entrega.</strong><br>
+              Aceitamos dinheiro e cartão (crédito/débito) via maquininha.
+            </p>
+          </div>
+        </div>
+
+        <button class="btn btn-gold btn-block btn-lg" id="placeOrderBtn" onclick="placeOrder()">
+          Confirmar Pedido →
+        </button>
+
+        <p style="font-size:.75rem;color:var(--gray);text-align:center;margin-top:1rem;">
+          Dúvidas?
+          <a href="https://wa.me/5511947291983" target="_blank" style="color:var(--gold);">WhatsApp (11) 94729-1983</a>
+        </p>
+      </div>
+
+      <!-- Order summary -->
+      <div>
+        <div class="order-summary">
+          <div class="order-summary-title">Resumo do Pedido</div>
+          <div class="summary-items" id="summaryItems">
+            <div style="text-align:center;color:var(--gray);font-size:.88rem;padding:1rem;">Carregando...</div>
+          </div>
+          <hr class="summary-divider">
+          <div class="summary-total">
+            <span class="summary-total-label">Total</span>
+            <span class="summary-total-value" id="summaryTotal">R$ 0,00</span>
+          </div>
+          <div style="margin-top:1rem;font-size:.78rem;color:var(--gray);display:flex;align-items:center;gap:.4rem;">
+            <span>🏍️</span> Entrega pela loja — taxa combinada na hora
+          </div>
+        </div>
+
+        <a href="/menu" style="display:block;text-align:center;margin-top:1rem;font-size:.85rem;color:var(--gray);">
+          ← Voltar e editar pedido
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/assets/js/cart.js"></script>
+<script src="/assets/js/checkout.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

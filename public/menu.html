@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardápio — Point dos Malokas</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/menu" class="nav-logo">Point.Malokas</a>
+  <ul class="nav-links">
+    <li><a href="https://wa.me/5511947291983" target="_blank" style="display:flex;align-items:center;gap:.35rem;"><i data-lucide="message-circle" style="width:15px;height:15px;"></i> WhatsApp</a></li>
+    <li><a href="https://instagram.com/pointdosmalokas" target="_blank">Instagram</a></li>
+  </ul>
+</nav>
+
+<!-- Category tabs -->
+<div class="menu-page-header">
+  <div id="categoryTabs" class="menu-categories">
+    <button class="menu-cat-btn active" data-cat="todos">Todos</button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="menu-page">
+  <div class="menu-content">
+    <!-- Products list -->
+    <div class="menu-products" id="menuProducts">
+      <div style="text-align:center;padding:4rem;color:var(--gray);">
+        <div class="spinner" style="margin:0 auto;width:36px;height:36px;"></div>
+        <p style="margin-top:1rem;">Carregando cardápio...</p>
+      </div>
+    </div>
+
+    <!-- Cart sidebar (desktop) -->
+    <aside class="cart-sidebar" id="cartSidebar">
+      <div class="cart-header">
+        <span class="cart-title">Seu Pedido</span>
+        <span class="cart-count" id="sidebarCartCount">0</span>
+      </div>
+      <div class="cart-items" id="sidebarCartItems">
+        <div class="cart-empty">
+          <div class="cart-empty-icon"><i data-lucide="shopping-cart" style="width:36px;height:36px;opacity:.4;"></i></div>
+          <p style="font-size:.88rem;">Seu carrinho está vazio.<br>Adicione itens do cardápio!</p>
+        </div>
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total-row">
+          <span class="cart-total-label">Total</span>
+          <span class="cart-total-value" id="sidebarCartTotal">R$ 0,00</span>
+        </div>
+        <button class="btn btn-gold btn-block" id="sidebarCheckoutBtn" onclick="goToCheckout()" disabled>
+          Finalizar Pedido →
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Cart bottom bar (mobile) -->
+<div class="cart-bottom-bar" id="cartBottomBar" style="display:none;">
+  <button class="cart-bottom-btn" onclick="openCartSheet()">
+    <span style="display:flex;align-items:center;gap:.4rem;"><i data-lucide="shopping-cart" style="width:16px;height:16px;"></i> Ver Carrinho (<span id="bottomCartCount">0</span>)</span>
+    <span id="bottomCartTotal">R$ 0,00</span>
+  </button>
+</div>
+
+<!-- Cart sheet overlay (mobile) -->
+<div class="cart-sheet-overlay" id="cartSheetOverlay" onclick="closeCartSheet()"></div>
+<div class="cart-sheet" id="cartSheet">
+  <div class="cart-sheet-handle"></div>
+  <div class="cart-header">
+    <span class="cart-title">Seu Pedido</span>
+    <button onclick="closeCartSheet()" style="background:none;border:none;color:var(--gray);font-size:1.5rem;cursor:pointer;">✕</button>
+  </div>
+  <div class="cart-items" id="sheetCartItems" style="overflow-y:auto;flex:1;"></div>
+  <div class="cart-footer">
+    <div class="cart-total-row">
+      <span class="cart-total-label">Total</span>
+      <span class="cart-total-value" id="sheetCartTotal">R$ 0,00</span>
+    </div>
+    <button class="btn btn-gold btn-block" onclick="goToCheckout()">Finalizar Pedido →</button>
+  </div>
+</div>
+
+<!-- Product customization modal -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalProductName">Produto</div>
+        <div style="font-size:.82rem;color:var(--gray);margin-top:.25rem;" id="modalProductDesc"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div class="qty-selector">
+          <button class="qty-btn" onclick="changeQty(-1)">−</button>
+          <span class="qty-value" id="modalQty">1</span>
+          <button class="qty-btn" onclick="changeQty(1)">+</button>
+        </div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--gold);" id="modalSubtotal">R$ 0,00</div>
+      </div>
+      <button class="btn btn-gold btn-block btn-lg" id="modalAddBtn" onclick="addToCart()">
+        + Adicionar ao Pedido
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/assets/js/cart.js"></script>
+<script src="/assets/js/menu.js"></script>
+<script>lucide.createIcons();</script>
+<script>
+function toggleMobileMenu(btn) {
+  const nav = document.getElementById('mobileNav');
+  const isOpen = nav.style.display === 'flex';
+  nav.style.display = isOpen ? 'none' : 'flex';
+  btn.textContent = isOpen ? '☰' : '✕';
+}
+</script>
+</body>
+</html>
