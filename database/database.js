@@ -3,10 +3,13 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 
-const dbDir = process.env.NODE_ENV === 'production'
-  ? '/data'
-  : path.join(__dirname);
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+let dbDir = process.env.NODE_ENV === 'production' ? '/data' : path.join(__dirname);
+try {
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+} catch {
+  console.warn(`[DB] Não foi possível usar ${dbDir}, usando diretório local.`);
+  dbDir = path.join(__dirname);
+}
 
 const db = new Database(path.join(dbDir, 'delivery.db'));
 
