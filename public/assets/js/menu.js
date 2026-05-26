@@ -238,25 +238,26 @@ function buildAcaiOptionsHtml(acaiCat) {
 function buildPastelOptionsHtml() {
   const pastelCat = menuData.find(c => /pastel/i.test(c.slug || c.name));
   if (!pastelCat) return '';
-  // Get options from any pastel product that has options
-  const prodWithOpts = pastelCat.products.find(p => p.has_options && p.options && Object.keys(p.options).length);
+  // Prefer "Monte seu Pastel" — has full flat list of fillings
+  const prodWithOpts = pastelCat.products.find(p => /monte/i.test(p.name) && p.has_options)
+    || pastelCat.products.find(p => p.has_options && p.options && Object.keys(p.options).length);
   if (!prodWithOpts) return '';
 
-  let html = '';
-  Object.entries(prodWithOpts.options).forEach(([group, optList]) => {
-    html += `<div class="options-group">
-      <div class="options-group-title">${group}</div>
-      <div class="options-list">${optList.map(opt => {
-        const isSel = selectedOptions[group]?.some(o => o.name === opt.name);
-        return `<div class="option-chip${isSel ? ' selected' : ''}"
-             onclick="toggleOption('${group}', '${opt.name}', ${opt.price}, this)"
-             data-group="${group}" data-name="${opt.name}" data-price="${opt.price}">
-          ${opt.name}
-        </div>`;
-      }).join('')}</div>
-    </div>`;
-  });
-  return html;
+  // Flatten all option groups into one list
+  const allEntries = Object.entries(prodWithOpts.options);
+  const group = allEntries[0]?.[0] || 'Recheios';
+  const flatOpts = allEntries.flatMap(([, opts]) => opts);
+
+  const isSel = opt => selectedOptions[group]?.some(o => o.name === opt.name);
+  return `<div class="options-group">
+    <div class="options-group-title">Escolha os ${comboModalFreeLimit} Recheios</div>
+    <div class="options-list">${flatOpts.map(opt => `
+      <div class="option-chip${isSel(opt) ? ' selected' : ''}"
+           onclick="toggleOption('${group}', '${opt.name}', ${opt.price}, this)"
+           data-group="${group}" data-name="${opt.name}" data-price="${opt.price}">
+        ${opt.name}
+      </div>`).join('')}</div>
+  </div>`;
 }
 
 function buildComboModalBody(combo, acaiCat) {
