@@ -7,10 +7,24 @@ let orderPlaced = false;
 let changeFor = null;
 let pendingOrderId = null;
 let pixPollInterval = null;
+let deliveryFee = 0;
+let storeOpen = true;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Carrega configurações da loja (taxa de entrega + status)
+  try {
+    const res = await fetch('/api/settings');
+    const s = await res.json();
+    deliveryFee = parseFloat(s.delivery_fee) || 0;
+    storeOpen = s.store_open !== '0';
+    if (!storeOpen) {
+      const btn = document.getElementById('placeOrderBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '🔒 Loja fechada no momento'; btn.style.opacity = '.6'; }
+    }
+  } catch {}
+
   const cart = getCart();
   const pending = getPendingOrder();
 
@@ -224,6 +238,8 @@ function copyPixModalKey() {
 function renderSummary(cart) {
   const container = document.getElementById('summaryItems');
   const totalEl = document.getElementById('summaryTotal');
+  const feeEl = document.getElementById('summaryDeliveryFee');
+  const feeRow = document.getElementById('summaryFeeRow');
   if (!container) return;
 
   container.innerHTML = cart.map(item => `
@@ -236,7 +252,11 @@ function renderSummary(cart) {
       <div class="summary-item-price">${formatBRL(item.subtotal)}</div>
     </div>`).join('');
 
-  if (totalEl) totalEl.textContent = formatBRL(getTotal());
+  const itemsTotal = getTotal();
+  const grand = itemsTotal + deliveryFee;
+  if (feeRow) feeRow.style.display = deliveryFee > 0 ? 'flex' : 'none';
+  if (feeEl) feeEl.textContent = formatBRL(deliveryFee);
+  if (totalEl) totalEl.textContent = formatBRL(grand);
 }
 
 // ── PAYMENT SELECTION ─────────────────────────────────────────────────────────────
@@ -389,6 +409,7 @@ async function placeOrder() {
     items:          cart,
     payment_method: paymentMethod,
     change_for:     paymentMethod === 'dinheiro' ? changeFor : null,
+    delivery_fee:   deliveryFee,
   };
 
   try {

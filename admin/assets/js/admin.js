@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   showTab('orders');
   startPolling();
   updateAutoPrintUI();
+  apiFetch('/settings').then(r => r.json()).then(s => { settingsCache = s; updateStoreStatusUI(s.store_open === '1'); }).catch(() => {});
 });
 
 function startPolling() {
@@ -62,7 +63,7 @@ function startPolling() {
 // ── TABS ──────────────────────────────────────────────────────────────────────────
 function showTab(tab) {
   currentTab = tab;
-  ['orders', 'menu', 'combos', 'promotions', 'reports'].forEach(t => {
+  ['orders', 'menu', 'combos', 'promotions', 'reports', 'settings'].forEach(t => {
     document.getElementById(`tab${capitalize(t)}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`nav${capitalize(t)}`).classList.toggle('active', t === tab);
     const mob = document.querySelector(`.mobile-nav-item[data-tab="${t}"]`);
@@ -74,6 +75,7 @@ function showTab(tab) {
   if (tab === 'combos') loadCombos();
   if (tab === 'promotions') loadPromotions();
   if (tab === 'reports') loadReports('today');
+  if (tab === 'settings') loadSettings();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -100,6 +102,7 @@ async function loadOrders(showLoader = true) {
     renderOrders();
     updateNewOrdersBadge(allOrders);
     if (autoPrint) autoPrintNewOrders(allOrders);
+    alertNewOrders(allOrders);
   } catch (e) {
     if (e.message !== 'Sessão expirada') showToast('Erro ao carregar pedidos.', 'error');
   }
@@ -392,11 +395,17 @@ function printOrder(orderId) {
   <div class="p-footer">Point dos Malokas — obrigado! 🤙</div>
 </body></html>`;
 
-  const win = window.open('', '_blank', 'width=420,height=700');
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 400);
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:-9999px;bottom:0;width:420px;height:700px;border:0;visibility:hidden;';
+  iframe.srcdoc = html;
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch {}
+    setTimeout(() => iframe.remove(), 3000);
+  };
+  document.body.appendChild(iframe);
 }
 
 function formatItemOptions(item) {
@@ -1196,6 +1205,109 @@ async function calcRoute(orderId) {
     btn.disabled = false;
     btn.innerHTML = `${ico('navigation',13)} Calcular Rota`;
   }
+}
+
+// ── SOUND ALERT ───────────────────────────────────────────────────────────────────
+
+let alertedOrderIds = null; // null = first load, don't alert existing orders
+
+function alertNewOrders(orders) {
+  const novos = orders.filter(o => o.order_status === 'novo');
+  if (alertedOrderIds === null) {
+    alertedOrderIds = new Set(novos.map(o => o.id));
+    return;
+  }
+  const unseen = novos.filter(o => !alertedOrderIds.has(o.id));
+  if (unseen.length) {
+    unseen.forEach(o => alertedOrderIds.add(o.id));
+    playNewOrderSound(unseen.length);
+  }
+}
+
+function playNewOrderSound(count = 1) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (startTime, freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.35, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+      osc.start(startTime);
+      osc.stop(startTime + 0.25);
+    };
+    beep(ctx.currentTime, 880);
+    beep(ctx.currentTime + 0.3, 1100);
+    if (count > 1) beep(ctx.currentTime + 0.6, 1100);
+  } catch {}
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────────
+
+let settingsCache = {};
+
+async function loadSettings() {
+  try {
+    const res = await apiFetch('/settings');
+    settingsCache = await res.json();
+    document.getElementById('settingDeliveryFee').value = settingsCache.delivery_fee || '0';
+    document.getElementById('settingStoreName').value   = settingsCache.store_name   || '';
+    document.getElementById('settingStorePhone').value  = settingsCache.store_phone  || '';
+    document.getElementById('settingPixKey').value      = settingsCache.pix_key      || '';
+    updateStoreStatusUI(settingsCache.store_open === '1');
+  } catch {}
+}
+
+function updateStoreStatusUI(isOpen) {
+  const dot    = document.getElementById('settingStoreStatusDot');
+  const text   = document.getElementById('settingStoreStatusText');
+  const btn    = document.getElementById('settingStoreToggleBtn');
+  const pill   = document.getElementById('storeStatusPill');
+  if (dot)  { dot.style.background = isOpen ? 'var(--green)' : 'var(--red)'; }
+  if (text) { text.textContent = isOpen ? '● Loja Aberta' : '● Loja Fechada'; text.style.color = isOpen ? 'var(--green)' : 'var(--red)'; }
+  if (btn)  { btn.textContent = isOpen ? 'Fechar Loja' : 'Abrir Loja'; btn.className = isOpen ? 'btn btn-sm' : 'btn btn-gold btn-sm'; }
+  if (pill) { pill.textContent = isOpen ? '● ABERTA' : '● FECHADA'; pill.style.background = isOpen ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)'; pill.style.color = isOpen ? 'var(--green)' : 'var(--red)'; }
+}
+
+async function toggleStoreOpen() {
+  const isOpen = settingsCache.store_open === '1';
+  const newVal = isOpen ? '0' : '1';
+  try {
+    await apiFetch('/settings', { method: 'PUT', body: JSON.stringify({ store_open: newVal }) });
+    settingsCache.store_open = newVal;
+    updateStoreStatusUI(newVal === '1');
+    showToast(newVal === '1' ? 'Loja aberta! ✅' : 'Loja fechada 🔒');
+  } catch { showToast('Erro ao alterar status.', 'error'); }
+}
+
+async function saveSettings() {
+  const payload = {
+    delivery_fee: document.getElementById('settingDeliveryFee').value || '0',
+    store_name:   document.getElementById('settingStoreName').value.trim(),
+    store_phone:  document.getElementById('settingStorePhone').value.trim(),
+    pix_key:      document.getElementById('settingPixKey').value.trim(),
+  };
+  try {
+    await apiFetch('/settings', { method: 'PUT', body: JSON.stringify(payload) });
+    Object.assign(settingsCache, payload);
+    showToast('Configurações salvas! ✅');
+  } catch { showToast('Erro ao salvar.', 'error'); }
+}
+
+async function changeAdminPassword() {
+  const cur = document.getElementById('settingCurrentPwd').value;
+  const nw  = document.getElementById('settingNewPwd').value;
+  if (!cur || !nw) { showToast('Preencha os campos de senha.', 'error'); return; }
+  try {
+    const res = await apiFetch('/settings/password', { method: 'PUT', body: JSON.stringify({ current_password: cur, new_password: nw }) });
+    if (!res.ok) { const d = await res.json(); showToast(d.error || 'Erro.', 'error'); return; }
+    showToast('Senha alterada com sucesso!');
+    document.getElementById('settingCurrentPwd').value = '';
+    document.getElementById('settingNewPwd').value = '';
+  } catch { showToast('Erro ao alterar senha.', 'error'); }
 }
 
 // Close modals on overlay click

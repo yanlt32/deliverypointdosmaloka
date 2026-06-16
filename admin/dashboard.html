@@ -39,6 +39,10 @@
         <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>
         <span>Relatórios</span>
       </button>
+      <button class="nav-item" onclick="showTab('settings')" id="navSettings">
+        <span class="nav-icon"><i data-lucide="settings"></i></span>
+        <span>Configurações</span>
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -61,7 +65,10 @@
     <!-- ── ORDERS TAB ────────────────────────────────── -->
     <div id="tabOrders">
       <div class="page-header">
-        <h1 class="page-title">PEDIDOS</h1>
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <h1 class="page-title">PEDIDOS</h1>
+          <button id="storeStatusPill" onclick="showTab('settings')" style="font-size:.72rem;font-weight:700;border-radius:999px;padding:.25rem .75rem;border:none;cursor:pointer;">...</button>
+        </div>
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
           <input type="date" id="ordersDateFilter" class="form-control" style="width:auto;" onchange="loadOrders()">
           <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ Atualizar</button>
@@ -157,6 +164,69 @@
             <div id="reportSummary"></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS TAB ──────────────────────────────── -->
+    <div id="tabSettings" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">CONFIGURAÇÕES</h1>
+      </div>
+      <div class="page-content" style="max-width:600px;">
+
+        <!-- Status da Loja -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">Status da Loja</h3>
+          <p style="font-size:.82rem;color:var(--gray);margin-bottom:1rem;">Quando fechada, o cliente vê um aviso e não consegue fazer pedidos.</p>
+          <div style="display:flex;align-items:center;gap:1rem;">
+            <div id="settingStoreStatusDot" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;"></div>
+            <span id="settingStoreStatusText" style="font-size:1rem;font-weight:700;color:var(--white);flex:1;"></span>
+            <button id="settingStoreToggleBtn" class="btn btn-sm" onclick="toggleStoreOpen()"></button>
+          </div>
+        </div>
+
+        <!-- Taxa de Entrega -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">Taxa de Entrega</h3>
+          <p style="font-size:.82rem;color:var(--gray);margin-bottom:1rem;">Cobrada automaticamente no checkout. Use 0 para entrega grátis.</p>
+          <div class="form-group">
+            <label>Valor (R$)</label>
+            <input type="number" id="settingDeliveryFee" class="form-control" min="0" step="0.50" placeholder="Ex: 5.00" style="max-width:160px;">
+          </div>
+        </div>
+
+        <!-- Informações da Loja -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">Informações da Loja</h3>
+          <div class="form-group" style="margin-top:1rem;">
+            <label>Nome da Loja</label>
+            <input type="text" id="settingStoreName" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Telefone / WhatsApp</label>
+            <input type="text" id="settingStorePhone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Chave PIX</label>
+            <input type="text" id="settingPixKey" class="form-control">
+          </div>
+        </div>
+
+        <!-- Alterar Senha -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">Alterar Senha do Admin</h3>
+          <div class="form-group" style="margin-top:1rem;">
+            <label>Senha Atual</label>
+            <input type="password" id="settingCurrentPwd" class="form-control" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label>Nova Senha (mín. 6 caracteres)</label>
+            <input type="password" id="settingNewPwd" class="form-control" autocomplete="new-password">
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="changeAdminPassword()">Alterar Senha</button>
+        </div>
+
+        <button class="btn btn-gold btn-block" style="margin-top:.5rem;" onclick="saveSettings()">💾 Salvar Configurações</button>
       </div>
     </div>
 

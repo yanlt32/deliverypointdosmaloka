@@ -35,7 +35,7 @@ router.get('/menu', (req, res) => {
       const optionGroups = {};
       options.forEach(opt => {
         if (!optionGroups[opt.option_group]) optionGroups[opt.option_group] = [];
-        optionGroups[opt.option_group].push({ id: opt.id, name: opt.name, price: opt.price });
+        optionGroups[opt.option_group].push({ id: opt.id, name: opt.name, price: opt.price, maxSelect: opt.max_select || null });
       });
 
       return { ...p, variants_raw: undefined, variants, options: optionGroups };
@@ -53,6 +53,14 @@ router.get('/combos', (req, res) => {
   res.json(combos);
 });
 
+// GET /api/settings (público)
+router.get('/settings', (req, res) => {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key IN ('store_open','delivery_fee','store_name','store_phone')").all();
+  const s = {};
+  rows.forEach(r => { s[r.key] = r.value; });
+  res.json(s);
+});
+
 // GET /api/promotions/active
 router.get('/promotions/active', (req, res) => {
   const promos = db.prepare('SELECT * FROM promotions WHERE active = 1 ORDER BY id DESC').all();
@@ -61,7 +69,7 @@ router.get('/promotions/active', (req, res) => {
 
 // POST /api/orders
 router.post('/orders', async (req, res) => {
-  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for } = req.body;
+  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for, delivery_fee } = req.body;
 
   if (!customer_name || !customer_phone || !street || !number || !neighborhood || !items || !items.length || !payment_method) {
     return res.status(400).json({ error: 'Dados incompletos. Verifique todos os campos.' });
@@ -73,10 +81,11 @@ router.post('/orders', async (req, res) => {
   const id = crypto.randomUUID();
   const orderNumber = 'PDM-' + Date.now().toString().slice(-6);
 
+  const fee = parseFloat(delivery_fee) || 0;
   db.prepare(`
-    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null);
+    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for, delivery_fee)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee);
 
   let pixData = null;
   if (payment_method === 'pix') {

@@ -57,6 +57,11 @@ function init() {
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS product_options (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       product_id INTEGER,
@@ -64,7 +69,8 @@ function init() {
       option_group TEXT NOT NULL,
       name TEXT NOT NULL,
       price REAL DEFAULT 0,
-      sort_order INTEGER DEFAULT 0
+      sort_order INTEGER DEFAULT 0,
+      max_select INTEGER DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS combos (
@@ -115,8 +121,24 @@ function init() {
   try { db.exec("ALTER TABLE promotions ADD COLUMN image_url TEXT DEFAULT ''"); } catch {}
   try { db.exec("ALTER TABLE promotions ADD COLUMN price REAL"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN change_for REAL"); } catch {}
+  try { db.exec("ALTER TABLE product_options ADD COLUMN max_select INTEGER DEFAULT NULL"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN delivery_fee REAL DEFAULT 0"); } catch {}
+  db.exec(`UPDATE product_options SET max_select = 1 WHERE option_group IN ('Sabor','Sabores','Recheio 1','Recheio 2') AND max_select IS NULL`);
+  db.exec(`UPDATE product_options SET max_select = 3 WHERE option_group = 'Recheios (até 3)' AND max_select IS NULL`);
 
+  seedSettings();
   seed();
+}
+
+function seedSettings() {
+  const ins = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+  [
+    ['store_open',    '1'],
+    ['delivery_fee',  '0'],
+    ['pix_key',       process.env.PIX_KEY || '+5511947291983'],
+    ['store_phone',   '(11) 94729-1983'],
+    ['store_name',    'Point dos Malokas'],
+  ].forEach(([k, v]) => ins.run(k, v));
 }
 
 function seed() {

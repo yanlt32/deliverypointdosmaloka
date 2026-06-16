@@ -2,6 +2,7 @@
 let menuData = [];
 let combosData = [];
 let promosData = [];
+let storeOpen = true;
 let currentProduct = null;
 let currentCombo = null;
 let selectedVariant = null;
@@ -19,12 +20,39 @@ let comboModalType = 'acai'; // 'acai' | 'pastel'
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([loadMenu(), loadCombos(), loadPromotions()]);
+  const [,,,settings] = await Promise.all([loadMenu(), loadCombos(), loadPromotions(), loadStoreSettings()]);
   renderCategoryTabs(menuData);
   renderAllProducts(menuData, 'todos');
   renderCartUI();
   setupMobileCart();
 });
+
+async function loadStoreSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    const s = await res.json();
+    storeOpen = s.store_open !== '0';
+    if (!storeOpen) showStoreClosed(s.store_name, s.store_phone);
+    return s;
+  } catch { return {}; }
+}
+
+function closedToast() {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid var(--red);color:var(--red);padding:.65rem 1.25rem;border-radius:8px;font-size:.85rem;z-index:3000;font-weight:600;white-space:nowrap;';
+  t.textContent = '🔒 Loja fechada no momento.';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function showStoreClosed(name, phone) {
+  const banner = document.createElement('div');
+  banner.id = 'storeClosedBanner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2000;background:#1a1a1a;border-bottom:2px solid var(--red);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:center;gap:.75rem;flex-wrap:wrap;';
+  banner.innerHTML = `<span style="font-size:1.1rem;">🔒</span><strong style="color:var(--red);">Loja fechada no momento.</strong><span style="color:var(--gray);font-size:.88rem;">Voltamos em breve! ${phone ? '📱 '+phone : ''}</span>`;
+  document.body.prepend(banner);
+  renderCartUI();
+}
 
 // ── PROMOÇÕES DO DIA ──────────────────────────────────────────────────────────
 async function loadPromotions() {
@@ -86,6 +114,7 @@ function showPromotionsModal(promotions) {
 }
 
 function addPromoToCart(id, title, price) {
+  if (!storeOpen) { closedToast(); return; }
   addItem({
     productId: `promo-${id}`,
     productName: title,
@@ -270,6 +299,7 @@ function detectComboConfig(combo) {
 }
 
 function addComboToCart(comboId) {
+  if (!storeOpen) { closedToast(); return; }
   const combo = combosData.find(c => c.id === comboId);
   if (!combo) return;
 
@@ -331,15 +361,16 @@ function buildPastelOptionsHtml() {
   const group = allEntries[0]?.[0] || 'Recheios';
   const flatOpts = allEntries.flatMap(([, opts]) => opts);
 
-  const isSel = opt => selectedOptions[group]?.some(o => o.name === opt.name);
   return `<div class="options-group">
-    <div class="options-group-title">Escolha os ${comboModalFreeLimit} Recheios</div>
-    <div class="options-list">${flatOpts.map(opt => `
-      <div class="option-chip${isSel(opt) ? ' selected' : ''}"
+    <div class="options-group-title">Escolha os ${comboModalFreeLimit} Recheios <span style="color:var(--gray);font-size:.7rem;">(pode repetir sabores)</span></div>
+    <div class="options-list">${flatOpts.map(opt => {
+      const count = (selectedOptions[group] || []).filter(o => o.name === opt.name).length;
+      return `<div class="option-chip${count > 0 ? ' selected' : ''}"
            onclick="toggleOption('${group}', '${opt.name}', ${opt.price}, this)"
            data-group="${group}" data-name="${opt.name}" data-price="${opt.price}">
-        ${opt.name}
-      </div>`).join('')}</div>
+        ${opt.name}${count > 0 ? `<span class="chip-count">×${count}</span>` : ''}
+      </div>`;
+    }).join('')}</div>
   </div>`;
 }
 
@@ -450,6 +481,7 @@ function renderProductCard(product) {
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 function openModal(productId) {
+  if (!storeOpen) { closedToast(); return; }
   const cat = menuData.find(c => c.products.some(p => p.id === productId));
   const product = cat?.products.find(p => p.id === productId);
   if (!product) return;
@@ -495,19 +527,21 @@ function renderModalBody(product) {
   }
 
   if (product.has_options && product.options && Object.keys(product.options).length) {
-    html += `<div id="freeOptionsCounter" style="text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.45rem 1rem;margin-bottom:.75rem;font-size:.82rem;color:var(--gray);">
-      <span id="freeCountText">0</span>/${MAX_FREE_OPTIONS} opções gratuitas selecionadas
-    </div>`;
     Object.entries(product.options).forEach(([group, opts]) => {
       const isExtra = group === 'Adicionais Extras';
+      const maxSelect = opts[0]?.maxSelect || null;
+      const groupLabel = maxSelect
+        ? `${group} <span style="color:var(--gray);font-size:.7rem;">(escolha ${maxSelect === 1 ? '1 opção' : `até ${maxSelect}`})</span>`
+        : group;
       html += `<div class="options-group">
         <div class="options-group-title">
-          ${group}${isExtra ? ' <span style="color:var(--green);font-size:.7rem;">(+ preço)</span>' : ''}
+          ${groupLabel}${isExtra ? ' <span style="color:var(--green);font-size:.7rem;">(+ preço)</span>' : ''}
         </div>
         <div class="options-list">${
           opts.map(opt => `
             <div class="option-chip" onclick="toggleOption('${group}', '${opt.name}', ${opt.price}, this)"
-                 data-group="${group}" data-name="${opt.name}" data-price="${opt.price}">
+                 data-group="${group}" data-name="${opt.name}" data-price="${opt.price}"
+                 data-max-select="${maxSelect || ''}">
               ${opt.name}
               ${opt.price > 0 ? `<span class="chip-price">+${formatBRL(opt.price)}</span>` : ''}
             </div>`).join('')
@@ -537,21 +571,53 @@ function selectVariant(variantId, price, el) {
 
 function toggleOption(group, name, price, el) {
   if (!selectedOptions[group]) selectedOptions[group] = [];
-  const idx = selectedOptions[group].findIndex(o => o.name === name);
-  if (idx > -1) {
-    selectedOptions[group].splice(idx, 1);
-    el.classList.remove('selected');
-  } else {
-    const freeLimit = currentCombo ? comboModalFreeLimit : MAX_FREE_OPTIONS;
-    if (parseFloat(price) === 0 && countFreeOptions(selectedOptions) >= freeLimit) {
-      const msg = comboModalType === 'pastel'
-        ? `Máximo de ${freeLimit} pastéis no combo!`
-        : `Máximo de ${freeLimit} opções gratuitas por açaí!`;
-      showToast(msg, 'error');
-      return;
+  const total = countFreeOptions(selectedOptions);
+
+  if (currentCombo && comboModalType === 'pastel') {
+    // Pastel combo: permite repetir o mesmo recheio — cada clique adiciona 1
+    const count = selectedOptions[group].filter(o => o.name === name).length;
+    if (total >= comboModalFreeLimit) {
+      if (count > 0) {
+        // remove 1 instância quando já está no limite
+        const i = selectedOptions[group].findIndex(o => o.name === name);
+        selectedOptions[group].splice(i, 1);
+      } else {
+        showToast(`Máximo de ${comboModalFreeLimit} pastéis no combo!`, 'error');
+        return;
+      }
+    } else {
+      selectedOptions[group].push({ name, price: parseFloat(price) });
     }
-    selectedOptions[group].push({ name, price: parseFloat(price) });
-    el.classList.add('selected');
+    const newCount = selectedOptions[group].filter(o => o.name === name).length;
+    if (newCount > 0) {
+      el.classList.add('selected');
+      const span = el.querySelector('.chip-count');
+      if (span) span.textContent = `×${newCount}`;
+      else el.insertAdjacentHTML('beforeend', `<span class="chip-count">×${newCount}</span>`);
+    } else {
+      el.classList.remove('selected');
+      el.querySelector('.chip-count')?.remove();
+    }
+  } else {
+    const idx = selectedOptions[group].findIndex(o => o.name === name);
+    if (idx > -1) {
+      selectedOptions[group].splice(idx, 1);
+      el.classList.remove('selected');
+    } else {
+      // verifica limite por grupo (max_select)
+      const maxSelect = parseInt(el.dataset.maxSelect) || null;
+      if (maxSelect && (selectedOptions[group] || []).filter(o => (o.price || 0) === 0).length >= maxSelect) {
+        showToast(`Escolha apenas ${maxSelect} opção em "${group}"`, 'error');
+        return;
+      }
+      const freeLimit = currentCombo ? comboModalFreeLimit : MAX_FREE_OPTIONS;
+      if (parseFloat(price) === 0 && !maxSelect && total >= freeLimit) {
+        showToast(`Máximo de ${freeLimit} opções gratuitas por açaí!`, 'error');
+        return;
+      }
+      selectedOptions[group].push({ name, price: parseFloat(price) });
+      el.classList.add('selected');
+    }
   }
   updateFreeCounter();
   updateModalSubtotal();
@@ -627,7 +693,12 @@ function addToCart() {
     const allSummary = selectedOptionsArray.map((opts, i) => {
       const parts = Object.entries(opts)
         .filter(([, v]) => v.length)
-        .map(([group, list]) => `${group}: ${list.map(o => o.name).join(', ')}`)
+        .map(([group, list]) => {
+          const counts = {};
+          list.forEach(o => { counts[o.name] = (counts[o.name] || 0) + 1; });
+          const names = Object.entries(counts).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(', ');
+          return `${group}: ${names}`;
+        })
         .join(' · ');
       if (!parts) return null;
       return comboAcaiCount > 1 ? `Açaí ${i + 1}: ${parts}` : parts;
@@ -690,7 +761,10 @@ function renderCartUI() {
   if (sidebarItems) sidebarItems.innerHTML = renderCartItems(cart);
   if (sidebarTotal) sidebarTotal.textContent = formatBRL(total);
   if (sidebarCount) sidebarCount.textContent = count;
-  if (sidebarBtn) sidebarBtn.disabled = count === 0;
+  if (sidebarBtn) {
+    sidebarBtn.disabled = count === 0 || !storeOpen;
+    sidebarBtn.textContent = !storeOpen ? '🔒 Loja Fechada' : 'Finalizar Pedido →';
+  }
 
   const bottomBar = document.getElementById('cartBottomBar');
   const bottomCount = document.getElementById('bottomCartCount');
@@ -704,8 +778,13 @@ function renderCartUI() {
 
   const sheetItems = document.getElementById('sheetCartItems');
   const sheetTotal = document.getElementById('sheetCartTotal');
+  const sheetBtn   = document.getElementById('sheetCheckoutBtn');
   if (sheetItems) sheetItems.innerHTML = renderCartItems(cart);
   if (sheetTotal) sheetTotal.textContent = formatBRL(total);
+  if (sheetBtn) {
+    sheetBtn.disabled = !storeOpen;
+    sheetBtn.textContent = !storeOpen ? '🔒 Loja Fechada' : 'Finalizar Pedido →';
+  }
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -741,6 +820,7 @@ function removeFromCart(cartId) {
 }
 
 function goToCheckout() {
+  if (!storeOpen) { closedToast(); return; }
   if (getCount() === 0) {
     showToast('Adicione itens ao carrinho primeiro!', 'error');
     return;

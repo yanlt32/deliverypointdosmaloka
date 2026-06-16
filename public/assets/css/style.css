@@ -1005,6 +1005,7 @@ footer {
 .option-chip:hover { border-color: var(--gold); color: var(--white); }
 .option-chip.selected { border-color: var(--gold); background: rgba(245,197,24,.1); color: var(--gold); }
 .option-chip .chip-price { font-size: .72rem; color: var(--green); }
+.option-chip .chip-count { font-size: .72rem; font-weight: 700; background: var(--gold); color: var(--black); border-radius: 999px; padding: 0 .4rem; margin-left: .2rem; }
 
 /* Qty selector */
 .qty-selector {

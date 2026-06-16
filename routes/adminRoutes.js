@@ -340,4 +340,39 @@ router.put('/password', (req, res) => {
   res.json({ success: true });
 });
 
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+
+// GET /api/admin/settings
+router.get('/settings', (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM settings').all();
+  const s = {};
+  rows.forEach(r => { s[r.key] = r.value; });
+  res.json(s);
+});
+
+// PUT /api/admin/settings
+router.put('/settings', (req, res) => {
+  const allowed = ['store_open', 'delivery_fee', 'pix_key', 'store_phone', 'store_name'];
+  const upd = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
+  allowed.forEach(key => {
+    if (req.body[key] !== undefined) upd.run(String(req.body[key]), key);
+  });
+  res.json({ ok: true });
+});
+
+// PUT /api/admin/settings/password
+router.put('/settings/password', (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!new_password || new_password.length < 6) {
+    return res.status(400).json({ error: 'Nova senha deve ter ao menos 6 caracteres.' });
+  }
+  const admin = db.prepare('SELECT * FROM admins WHERE username = ?').get(req.admin.username);
+  if (!admin || !bcrypt.compareSync(current_password, admin.password_hash)) {
+    return res.status(401).json({ error: 'Senha atual incorreta.' });
+  }
+  db.prepare('UPDATE admins SET password_hash = ? WHERE username = ?')
+    .run(bcrypt.hashSync(new_password, 10), req.admin.username);
+  res.json({ ok: true });
+});
+
 module.exports = router;

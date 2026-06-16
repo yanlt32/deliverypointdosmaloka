@@ -36,7 +36,7 @@
 <!-- Category tabs -->
 <div class="menu-page-header">
   <div id="categoryTabs" class="menu-categories">
-    <button class="menu-cat-btn active" data-cat="todos">Todos</button>
+    <button class="menu-cat-btn active" data-cat="todos" onclick="filterByCategory('todos')">Todos</button>
   </div>
 </div>
 
@@ -98,7 +98,7 @@
       <span class="cart-total-label">Total</span>
       <span class="cart-total-value" id="sheetCartTotal">R$ 0,00</span>
     </div>
-    <button class="btn btn-gold btn-block" onclick="goToCheckout()">Finalizar Pedido →</button>
+    <button class="btn btn-gold btn-block" id="sheetCheckoutBtn" onclick="goToCheckout()">Finalizar Pedido →</button>
   </div>
 </div>
 
