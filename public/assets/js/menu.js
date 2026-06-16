@@ -1,6 +1,7 @@
 // Menu page logic
 let menuData = [];
 let combosData = [];
+let promosData = [];
 let currentProduct = null;
 let currentCombo = null;
 let selectedVariant = null;
@@ -18,12 +19,90 @@ let comboModalType = 'acai'; // 'acai' | 'pastel'
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([loadMenu(), loadCombos()]);
+  await Promise.all([loadMenu(), loadCombos(), loadPromotions()]);
   renderCategoryTabs(menuData);
   renderAllProducts(menuData, 'todos');
   renderCartUI();
   setupMobileCart();
 });
+
+// ── PROMOÇÕES DO DIA ──────────────────────────────────────────────────────────
+async function loadPromotions() {
+  try {
+    const res = await fetch('/api/promotions/active');
+    promosData = await res.json();
+    if (promosData.length) showPromotionsModal(promosData);
+  } catch {}
+}
+
+function renderPromoSection() {
+  if (!promosData.length) return '';
+  return `
+    <div class="menu-section promo-section" id="cat-promocoes">
+      <h2 class="menu-section-title" style="color:var(--gold);">
+        <i data-lucide="megaphone" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Promoções do Dia
+      </h2>
+      <div class="promos-grid">
+        ${promosData.map(p => `
+          <div class="promo-menu-card">
+            ${p.image_url ? `<img src="${p.image_url}" alt="${p.title}" class="promo-menu-card-img" onerror="this.style.display='none'">` : ''}
+            <div class="promo-menu-card-body">
+              ${p.tag ? `<span class="chip" style="margin-bottom:.4rem;display:inline-block;">${p.tag}</span>` : ''}
+              <div class="promo-menu-card-title">${p.title}</div>
+              ${p.message ? `<div class="promo-menu-card-desc">${p.message}</div>` : ''}
+              ${p.price ? `
+                <div class="promo-menu-card-footer">
+                  <span class="promo-card-price">${formatBRL(p.price)}</span>
+                  <button class="btn-add-cart" onclick="addPromoToCart(${p.id},'${p.title.replace(/'/g,"\\'")}',${p.price})" title="Adicionar">+</button>
+                </div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function showPromotionsModal(promotions) {
+  const ids = promotions.map(p => p.id).join(',');
+  if (sessionStorage.getItem('seenPromotions') === ids) return;
+
+  const body = document.getElementById('promotionsModalBody');
+  body.innerHTML = promotions.map(p => `
+    <div class="promo-card">
+      ${p.image_url ? `<img src="${p.image_url}" alt="${p.title}" class="promo-card-img" onerror="this.style.display='none'">` : ''}
+      ${p.tag ? `<span class="chip" style="margin-bottom:.5rem;display:inline-block;">${p.tag}</span>` : ''}
+      <div class="promo-card-title">${p.title}</div>
+      ${p.message ? `<div class="promo-card-message">${p.message}</div>` : ''}
+      ${p.price ? `
+        <div class="promo-card-footer">
+          <span class="promo-card-price">${formatBRL(p.price)}</span>
+          <button class="btn-add-cart promo-add-btn" onclick="addPromoToCart(${p.id}, '${p.title.replace(/'/g,"\\'")}', ${p.price})">
+            + Adicionar ao Carrinho
+          </button>
+        </div>` : ''}
+    </div>`).join('');
+
+  document.getElementById('promotionsModal').classList.add('open');
+  sessionStorage.setItem('seenPromotions', ids);
+}
+
+function addPromoToCart(id, title, price) {
+  addItem({
+    productId: `promo-${id}`,
+    productName: title,
+    variant: null,
+    options: {},
+    optionsSummary: '🔥 Promoção do Dia',
+    qty: 1,
+    subtotal: parseFloat(price),
+  });
+  renderCartUI();
+  showToast(`${title} adicionado!`);
+  closePromotionsModal();
+}
+
+function closePromotionsModal() {
+  document.getElementById('promotionsModal').classList.remove('open');
+}
 
 async function loadMenu() {
   try {
@@ -113,6 +192,10 @@ function filterByCategory(slug) {
 function renderAllProducts(data, mode) {
   const container = document.getElementById('menuProducts');
   let html = '';
+
+  if (mode === 'todos' && promosData.length) {
+    html += renderPromoSection();
+  }
 
   if (mode === 'todos' && combosData.length) {
     html += renderComboSection();

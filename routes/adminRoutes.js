@@ -176,6 +176,33 @@ router.delete('/combos/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// ── PROMOÇÕES DO DIA ─────────────────────────────────────────────────────────
+
+router.get('/promotions', (req, res) => {
+  res.json(db.prepare('SELECT * FROM promotions ORDER BY id DESC').all());
+});
+
+router.post('/promotions', (req, res) => {
+  const { title, message, tag, image_url, price, active } = req.body;
+  if (!title) return res.status(400).json({ error: 'Título é obrigatório.' });
+  const result = db.prepare('INSERT INTO promotions (title, message, tag, image_url, price, active) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(title, message || '', tag || '', image_url || '', price || null, active === false ? 0 : 1);
+  res.status(201).json({ success: true, id: result.lastInsertRowid });
+});
+
+router.put('/promotions/:id', (req, res) => {
+  const { title, message, tag, image_url, price, active } = req.body;
+  if (!title) return res.status(400).json({ error: 'Título é obrigatório.' });
+  db.prepare('UPDATE promotions SET title=?, message=?, tag=?, image_url=?, price=?, active=? WHERE id=?')
+    .run(title, message || '', tag || '', image_url || '', price || null, active ? 1 : 0, req.params.id);
+  res.json({ success: true });
+});
+
+router.delete('/promotions/:id', (req, res) => {
+  db.prepare('DELETE FROM promotions WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
 // ── REPORTS ───────────────────────────────────────────────────────────────────
 
 router.get('/reports', (req, res) => {

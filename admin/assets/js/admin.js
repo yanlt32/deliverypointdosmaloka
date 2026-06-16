@@ -6,6 +6,8 @@ let ordersFilter = 'todos';
 let allOrders = [];
 let allCategories = [];
 let pollTimer = null;
+let autoPrint = localStorage.getItem('pdm_auto_print') === '1';
+let printedOrderIds = new Set(JSON.parse(localStorage.getItem('pdm_printed_ids') || '[]'));
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────────
 if (!token) {
@@ -42,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   showTab('orders');
   startPolling();
+  updateAutoPrintUI();
 });
 
 function startPolling() {
@@ -59,7 +62,7 @@ function startPolling() {
 // ── TABS ──────────────────────────────────────────────────────────────────────────
 function showTab(tab) {
   currentTab = tab;
-  ['orders', 'menu', 'combos', 'reports'].forEach(t => {
+  ['orders', 'menu', 'combos', 'promotions', 'reports'].forEach(t => {
     document.getElementById(`tab${capitalize(t)}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`nav${capitalize(t)}`).classList.toggle('active', t === tab);
     const mob = document.querySelector(`.mobile-nav-item[data-tab="${t}"]`);
@@ -69,6 +72,7 @@ function showTab(tab) {
   if (tab === 'orders') loadOrders();
   if (tab === 'menu') loadProducts();
   if (tab === 'combos') loadCombos();
+  if (tab === 'promotions') loadPromotions();
   if (tab === 'reports') loadReports('today');
 }
 
@@ -95,8 +99,44 @@ async function loadOrders(showLoader = true) {
     renderOrderStats(allOrders);
     renderOrders();
     updateNewOrdersBadge(allOrders);
+    if (autoPrint) autoPrintNewOrders(allOrders);
   } catch (e) {
     if (e.message !== 'Sessão expirada') showToast('Erro ao carregar pedidos.', 'error');
+  }
+}
+
+function toggleAutoPrint() {
+  autoPrint = !autoPrint;
+  localStorage.setItem('pdm_auto_print', autoPrint ? '1' : '0');
+  updateAutoPrintUI();
+  if (autoPrint) {
+    showToast('Auto-impressão ativada! Permita pop-ups no navegador.', 'info');
+  } else {
+    showToast('Auto-impressão desativada.', 'info');
+  }
+}
+
+function updateAutoPrintUI() {
+  const btn   = document.getElementById('autoPrintBtn');
+  const label = document.getElementById('autoPrintLabel');
+  if (!label) return;
+  if (autoPrint) {
+    label.textContent = 'Auto-impressão: ON';
+    btn.classList.replace('btn-ghost', 'btn-gold');
+  } else {
+    label.textContent = 'Auto-impressão: OFF';
+    if (btn.classList.contains('btn-gold')) btn.classList.replace('btn-gold', 'btn-ghost');
+  }
+}
+
+function autoPrintNewOrders(orders) {
+  const novos = orders.filter(o => o.order_status === 'novo' && !printedOrderIds.has(o.id));
+  novos.forEach(order => {
+    printedOrderIds.add(order.id);
+    printOrder(order.id);
+  });
+  if (novos.length) {
+    localStorage.setItem('pdm_printed_ids', JSON.stringify([...printedOrderIds]));
   }
 }
 
@@ -186,7 +226,13 @@ function renderOrders() {
         </div>
         <div>
           <div class="order-total">${formatBRL(order.total)}</div>
-          <div class="order-payment">${order.payment_method === 'pix' ? `${ico('smartphone',12)} Pix` : `${ico('banknote',12)} Dinheiro/Cartão`}</div>
+          <div class="order-payment">
+            ${order.payment_method === 'pix'
+              ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : '<span class="pix-pending-badge">⏳ Aguardando PIX</span>'}`
+              : order.payment_method === 'cartao'
+                ? `${ico('credit-card',12)} Cartão na Entrega`
+                : `${ico('banknote',12)} Dinheiro na Entrega`}
+          </div>
         </div>
         <div onclick="event.stopPropagation();">
           <select class="status-select" onchange="updateOrderStatus('${order.id}', this.value, this)">
@@ -197,6 +243,9 @@ function renderOrders() {
             <option value="entregue"   ${order.order_status === 'entregue'   ? 'selected' : ''}>Entregue</option>
             <option value="cancelado"  ${order.order_status === 'cancelado'  ? 'selected' : ''}>Cancelado</option>
           </select>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:.4rem;" onclick="printOrder('${order.id}')">
+            🖨️ Imprimir
+          </button>
         </div>
       </div>`;
   }).join('');
@@ -237,6 +286,117 @@ function openOrderDetail(orderId) {
 
 function closeDetailPanel() {
   document.getElementById('orderDetailPanel').classList.remove('open');
+}
+
+function printOrder(orderId) {
+  const order = allOrders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const addr = [order.street, order.number, order.complement, order.neighborhood, order.city].filter(Boolean).join(', ');
+  const ref  = order.reference ? `<div class="p-ref">Ref: ${order.reference}</div>` : '';
+  const notes = order.notes ? `<div class="p-block p-obs"><strong>⚠️ Observações:</strong> ${order.notes}</div>` : '';
+
+  const statusMap = { novo:'Novo', confirmado:'Confirmado', preparando:'Preparando', saiu:'Saiu para entrega', entregue:'Entregue', cancelado:'Cancelado' };
+  const payMap    = { pix:'PIX', dinheiro:'Dinheiro na Entrega', cartao:'Cartão na Entrega' };
+
+  const items = (order.items || []).map(item => {
+    const opts = item.optionsSummary ? `<div class="p-item-opts">${item.optionsSummary.replace(/ \| /g, '<br>')}</div>` : '';
+    const variant = item.variant ? `<div class="p-item-opts">${item.variant}</div>` : '';
+    return `
+      <tr>
+        <td>${item.qty > 1 ? `${item.qty}x ` : ''}${item.productName}${variant}${opts}</td>
+        <td class="p-right">R$ ${parseFloat(item.subtotal).toFixed(2).replace('.',',')}</td>
+      </tr>`;
+  }).join('');
+
+  const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+  <meta charset="UTF-8">
+  <title>Pedido ${order.order_number}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Courier New', monospace; font-size: 13px; color: #000; background: #fff; padding: 16px; max-width: 380px; margin: 0 auto; }
+    .p-logo { text-align:center; font-size:20px; font-weight:900; letter-spacing:.1em; margin-bottom:4px; }
+    .p-sub  { text-align:center; font-size:11px; color:#555; margin-bottom:12px; }
+    .p-divider { border:none; border-top:2px dashed #000; margin:10px 0; }
+    .p-num  { text-align:center; font-size:22px; font-weight:900; margin:6px 0 2px; }
+    .p-status { text-align:center; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
+    .p-date { text-align:center; font-size:10px; color:#555; margin-bottom:10px; }
+    .p-block { margin:8px 0; }
+    .p-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#555; margin-bottom:2px; }
+    .p-name  { font-size:15px; font-weight:900; }
+    .p-info  { font-size:12px; margin-top:2px; }
+    .p-ref   { font-size:11px; color:#555; margin-top:2px; }
+    .p-obs   { background:#fff8e1; border:1px solid #f0c000; border-radius:4px; padding:6px 8px; font-size:12px; }
+    table { width:100%; border-collapse:collapse; margin:4px 0; }
+    td    { padding:4px 2px; vertical-align:top; font-size:12px; }
+    .p-right { text-align:right; white-space:nowrap; font-weight:600; }
+    .p-item-opts { font-size:10px; color:#555; line-height:1.4; margin-top:2px; }
+    .p-total-row td { font-size:16px; font-weight:900; padding-top:8px; border-top:2px solid #000; }
+    .p-pay  { text-align:center; font-size:13px; font-weight:700; margin:10px 0 4px; }
+    .p-pix-pending { text-align:center; font-size:11px; color:#888; }
+    .p-footer { text-align:center; font-size:10px; color:#888; margin-top:12px; }
+    @media print {
+      body { padding:0; }
+      @page { margin:8mm; }
+    }
+  </style>
+</head><body>
+  <div class="p-logo">★ POINT DOS MALOKAS ★</div>
+  <div class="p-sub">Delivery — (11) 94729-1983</div>
+  <hr class="p-divider">
+  <div class="p-num">${order.order_number}</div>
+  <div class="p-status">${statusMap[order.order_status] || order.order_status}</div>
+  <div class="p-date">${formatDateFull(order.created_at)}</div>
+  <hr class="p-divider">
+
+  <div class="p-block">
+    <div class="p-label">Cliente</div>
+    <div class="p-name">${order.customer_name}</div>
+    <div class="p-info">📞 ${order.customer_phone}</div>
+  </div>
+
+  <div class="p-block">
+    <div class="p-label">Endereço de Entrega</div>
+    <div class="p-info">${addr}</div>
+    ${ref}
+  </div>
+
+  ${notes}
+  <hr class="p-divider">
+
+  <div class="p-label" style="margin-bottom:4px;">Itens do Pedido</div>
+  <table>
+    <tbody>${items}</tbody>
+    <tr class="p-total-row">
+      <td>TOTAL</td>
+      <td class="p-right">R$ ${parseFloat(order.total).toFixed(2).replace('.',',')}</td>
+    </tr>
+  </table>
+
+  <hr class="p-divider">
+  <div class="p-pay">💳 ${payMap[order.payment_method] || order.payment_method}</div>
+  ${order.payment_method === 'pix' && order.payment_status !== 'pago'
+    ? '<div class="p-pix-pending">⏳ Aguardando confirmação do PIX</div>' : ''}
+  ${order.payment_method === 'pix' && order.payment_status === 'pago'
+    ? '<div class="p-pix-pending" style="color:green;">✅ PIX Confirmado</div>' : ''}
+  ${order.change_for > 0 ? `
+  <table style="margin-top:6px;">
+    <tr><td style="font-size:12px;color:#555;">Cliente paga com</td><td class="p-right">R$ ${parseFloat(order.change_for).toFixed(2).replace('.',',')}</td></tr>
+    <tr><td style="font-size:13px;font-weight:900;">TROCO</td><td class="p-right" style="font-size:13px;font-weight:900;">R$ ${(parseFloat(order.change_for) - parseFloat(order.total)).toFixed(2).replace('.',',')}</td></tr>
+  </table>` : ''}
+
+  <hr class="p-divider">
+  <div class="p-footer">Impresso em ${now}</div>
+  <div class="p-footer">Point dos Malokas — obrigado! 🤙</div>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=420,height=700');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
 }
 
 function formatItemOptions(item) {
@@ -333,8 +493,11 @@ function renderOrderDetail(order) {
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--gold);">${formatBRL(order.total)}</div>
         </div>
         <div style="font-size:.75rem;color:var(--gray);margin-top:.3rem;text-align:right;">
-          ${order.payment_method === 'pix' ? `${ico('smartphone',12)} Pix` : `${ico('banknote',12)} Dinheiro/Cartão`}
-          ${order.payment_status === 'pago' ? '<span style="color:var(--green);">· Pago</span>' : ''}
+          ${order.payment_method === 'pix'
+            ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : '<span class="pix-pending-badge">⏳ Aguardando PIX</span>'}`
+            : order.payment_method === 'cartao'
+              ? `${ico('credit-card',12)} Cartão na Entrega`
+              : `${ico('banknote',12)} Dinheiro na Entrega`}
         </div>
       </div>
 
@@ -626,6 +789,134 @@ async function deleteCombo(id, name) {
   }
 }
 
+// ── PROMOÇÕES DO DIA ──────────────────────────────────────────────────────────────
+async function loadPromotions() {
+  try {
+    const res = await apiFetch('/promotions');
+    const promotions = await res.json();
+    renderPromotions(promotions);
+  } catch {
+    showToast('Erro ao carregar promoções.', 'error');
+  }
+}
+
+function renderPromotions(promotions) {
+  if (!promotions.length) {
+    document.getElementById('promotionsList').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📣</div><p>Nenhuma promoção cadastrada.</p></div>';
+    return;
+  }
+
+  document.getElementById('promotionsList').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Promoção</th><th>Tag</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody>
+          ${promotions.map(p => `
+            <tr>
+              <td>
+                <div style="font-weight:600;color:var(--white);">${p.title}</div>
+                ${p.message ? `<div style="font-size:.75rem;color:var(--gray);max-width:300px;">${p.message}</div>` : ''}
+              </td>
+              <td><span class="chip">${p.tag || '—'}</span></td>
+              <td><span class="${p.active ? 'text-green' : 'text-red'}">${p.active ? '● Ativa' : '● Inativa'}</span></td>
+              <td>
+                <div style="display:flex;gap:.4rem;">
+                  <button class="btn btn-ghost btn-sm" onclick="editPromotion(${JSON.stringify(p).replace(/"/g,'&quot;')})">${ico('pencil',13)}</button>
+                  <button class="btn btn-danger btn-sm" onclick="deletePromotion(${p.id}, '${(p.title || '').replace(/'/g, "\\'")}')">${ico('trash-2',13)}</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  refreshIcons();
+}
+
+function openPromotionModal(promo = null) {
+  document.getElementById('promotionEditId').value = promo?.id || '';
+  document.getElementById('promotionModalTitle').textContent = promo ? 'Editar Promoção' : 'Nova Promoção';
+  document.getElementById('promotionTag').value = promo?.tag || '';
+  document.getElementById('promotionTitle').value = promo?.title || '';
+  document.getElementById('promotionMessage').value = promo?.message || '';
+  document.getElementById('promotionPrice').value = promo?.price || '';
+  document.getElementById('promotionImageUrl').value = promo?.image_url || '';
+  document.getElementById('promotionActive').checked = promo ? !!promo.active : true;
+  const imgUrl = promo?.image_url || '';
+  const preview = document.getElementById('promotionImagePreview');
+  document.getElementById('promotionImagePreviewImg').src = imgUrl;
+  preview.style.display = imgUrl ? 'block' : 'none';
+  document.getElementById('promotionModal').classList.add('open');
+}
+
+function handlePromoImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const base64 = e.target.result;
+    document.getElementById('promotionImageUrl').value = base64;
+    document.getElementById('promotionImagePreviewImg').src = base64;
+    document.getElementById('promotionImagePreview').style.display = 'block';
+    document.getElementById('promotionUploadText').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPromoImage() {
+  document.getElementById('promotionImageUrl').value = '';
+  document.getElementById('promotionImageFile').value = '';
+  document.getElementById('promotionImagePreviewImg').src = '';
+  document.getElementById('promotionImagePreview').style.display = 'none';
+  document.getElementById('promotionUploadText').textContent = 'Clique para escolher foto';
+}
+
+function editPromotion(p) { openPromotionModal(p); }
+function closePromotionModal() { document.getElementById('promotionModal').classList.remove('open'); }
+
+async function savePromotion() {
+  const id = document.getElementById('promotionEditId').value;
+  const priceVal = parseFloat(document.getElementById('promotionPrice').value);
+  const payload = {
+    tag: document.getElementById('promotionTag').value.trim(),
+    title: document.getElementById('promotionTitle').value.trim(),
+    message: document.getElementById('promotionMessage').value.trim(),
+    image_url: document.getElementById('promotionImageUrl').value.trim(),
+    price: isNaN(priceVal) ? null : priceVal,
+    active: document.getElementById('promotionActive').checked,
+  };
+
+  if (!payload.title) {
+    showToast('Preencha o título da promoção.', 'error');
+    return;
+  }
+
+  try {
+    if (id) {
+      await apiFetch(`/promotions/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    } else {
+      await apiFetch('/promotions', { method: 'POST', body: JSON.stringify(payload) });
+    }
+    showToast('Promoção salva!');
+    closePromotionModal();
+    loadPromotions();
+  } catch {
+    showToast('Erro ao salvar promoção.', 'error');
+  }
+}
+
+async function deletePromotion(id, title) {
+  if (!confirm(`Excluir "${title}"?`)) return;
+  try {
+    await apiFetch(`/promotions/${id}`, { method: 'DELETE' });
+    showToast('Promoção excluída!');
+    loadPromotions();
+  } catch {
+    showToast('Erro ao excluir.', 'error');
+  }
+}
+
 // ── REPORTS ───────────────────────────────────────────────────────────────────────
 async function loadReports(period, btn) {
   if (btn) {
@@ -679,7 +970,7 @@ function renderReports(data) {
   document.getElementById('reportByPayment').innerHTML = byPayment.length
     ? byPayment.map(p => `
         <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);">
-          <span>${p.payment_method === 'pix' ? '📱 Pix' : '💵 Dinheiro/Cartão'} (${p.count}x)</span>
+          <span>${p.payment_method === 'pix' ? '📱 Pix' : p.payment_method === 'cartao' ? '💳 Cartão' : '💵 Dinheiro'} (${p.count}x)</span>
           <span style="color:var(--gold);font-family:'Bebas Neue',sans-serif;">${formatBRL(p.total)}</span>
         </div>`).join('')
     : '<div style="color:var(--gray);font-size:.85rem;">Sem dados</div>';
@@ -792,14 +1083,9 @@ function urgencyLevel(order) {
 function sortOrders(orders) {
   const w = { novo: 0, confirmado: 1, preparando: 2, saiu: 3, entregue: 4, cancelado: 5 };
   return [...orders].sort((a, b) => {
-    const aAct = ACTIVE_STATUSES.has(a.order_status);
-    const bAct = ACTIVE_STATUSES.has(b.order_status);
-    if (aAct !== bAct) return aAct ? -1 : 1;
-    if (aAct) {
-      // Active: oldest first so nothing is forgotten
-      return parseLocalDate(a.created_at) - parseLocalDate(b.created_at);
-    }
-    // Completed: newest first
+    const wa = w[a.order_status] ?? 9;
+    const wb = w[b.order_status] ?? 9;
+    if (wa !== wb) return wa - wb;
     return parseLocalDate(b.created_at) - parseLocalDate(a.created_at);
   });
 }

@@ -93,8 +93,14 @@
             <label class="payment-option" id="optDinheiro" onclick="selectPayment('dinheiro')">
               <input type="radio" name="payment" value="dinheiro">
               <div class="payment-icon"><i data-lucide="banknote"></i></div>
-              <div class="payment-name">Dinheiro / Cartão</div>
+              <div class="payment-name">Dinheiro</div>
               <div class="payment-desc">Pague na entrega</div>
+            </label>
+            <label class="payment-option" id="optCartao" onclick="selectPayment('cartao')">
+              <input type="radio" name="payment" value="cartao">
+              <div class="payment-icon"><i data-lucide="credit-card"></i></div>
+              <div class="payment-name">Cartão</div>
+              <div class="payment-desc">Maquininha na entrega</div>
             </label>
           </div>
 
@@ -124,17 +130,30 @@
               <span>Aguardando confirmação do pagamento... a página atualiza automaticamente.</span>
             </div>
 
-            <a id="whatsappPixBtn" href="#" target="_blank" class="btn btn-dark btn-block">
-              📲 Confirmar Pagamento no WhatsApp
-            </a>
           </div>
 
           <!-- Dinheiro info -->
           <div id="dinheiroInfo" style="display:none;margin-top:1rem;background:var(--dark);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
-            <p style="font-size:.88rem;color:var(--gray);">
+            <p style="font-size:.88rem;color:var(--gray);margin-bottom:1rem;">
               💡 <strong style="color:var(--white);">Pagamento na entrega.</strong><br>
               Aceitamos dinheiro e cartão (crédito/débito) via maquininha.
             </p>
+            <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;">Vai pagar com quanto? <span style="color:var(--gray);font-weight:400;text-transform:none;">(opcional)</span></div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
+              <button class="change-btn" onclick="selectChangeFor(20)">R$ 20</button>
+              <button class="change-btn" onclick="selectChangeFor(50)">R$ 50</button>
+              <button class="change-btn" onclick="selectChangeFor(100)">R$ 100</button>
+              <button class="change-btn" onclick="selectChangeFor(200)">R$ 200</button>
+              <button class="change-btn" onclick="selectChangeFor(null)" id="changeBtnNone" style="background:none;border-color:var(--border);">Não precisa de troco</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;">
+              <span style="font-size:.82rem;color:var(--gray);">Outro valor:</span>
+              <input type="number" id="changeForCustom" min="0" step="1" placeholder="Ex: 80" class="form-control" style="max-width:110px;" oninput="selectChangeFor(parseFloat(this.value)||null)">
+            </div>
+            <div id="changeResult" style="display:none;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:.65rem 1rem;font-size:.88rem;">
+              <span style="color:var(--gray);">Troco:</span>
+              <strong id="changeAmount" style="color:var(--green);font-size:1.1rem;margin-left:.4rem;"></strong>
+            </div>
           </div>
         </div>
 

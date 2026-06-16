@@ -1,5 +1,59 @@
 const QRCode = require('qrcode');
 
+// ── PIX DINÂMICO VIA API PAGBANK ──────────────────────────────────────────────
+async function generatePixQRDynamic(amount, orderNumber) {
+  const token = process.env.PAGBANK_TOKEN;
+  const amountCents = Math.round(parseFloat(amount) * 100);
+  const expiration_date = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .replace('Z', '-03:00');
+
+  const res = await fetch('https://api.pagseguro.com/charges', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      reference_id: orderNumber,
+      description: `Pedido ${orderNumber} - Point dos Malokas`,
+      amount: { value: amountCents, currency: 'BRL' },
+      payment_method: {
+        type: 'PIX',
+        installments: 1,
+        capture: true,
+        pix: { expiration_date },
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`PagBank API ${res.status}: ${err.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+
+  // PagBank retorna qr_codes dentro de payment_method
+  const qrCode = data.payment_method?.qr_codes?.[0] || data.qr_codes?.[0];
+  if (!qrCode?.text) throw new Error('PagBank não retornou QR code no corpo da resposta');
+
+  const qrBase64 = await QRCode.toDataURL(qrCode.text, {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 300,
+  });
+
+  return {
+    payload: qrCode.text,
+    qrBase64,
+    chargeId: data.id,
+    pixKey: null, // dinâmico não expõe a chave
+  };
+}
+
+// ── PIX ESTÁTICO (fallback sem token) ─────────────────────────────────────────
 function tlv(id, value) {
   const len = String(value.length).padStart(2, '0');
   return `${id}${len}${value}`;
@@ -27,7 +81,7 @@ function buildPixPayload(pixKey, amount, merchantName, merchantCity, txid) {
   const cleanCity = removeAccents(merchantCity).substring(0, 15).toUpperCase();
 
   const merchantAccount = tlv('00', 'br.gov.bcb.pix') + tlv('01', pixKey);
-  const additionalData = tlv('05', cleanTxid);
+  const additionalData  = tlv('05', cleanTxid);
 
   let payload = [
     tlv('00', '01'),
@@ -43,18 +97,18 @@ function buildPixPayload(pixKey, amount, merchantName, merchantCity, txid) {
     '6304',
   ].join('');
 
-  return payload.slice(0, -4) + crc16(payload);
+  return payload + crc16(payload);
 }
 
 async function generatePixQR(amount, txid) {
-  const pixKey = process.env.PIX_KEY || '+5511947291983';
+  const pixKey      = process.env.PIX_KEY          || '+5511947291983';
   const merchantName = process.env.PIX_MERCHANT_NAME || 'Point dos Malokas';
   const merchantCity = process.env.PIX_MERCHANT_CITY || 'Sao Paulo';
 
-  const payload = buildPixPayload(pixKey, amount, merchantName, merchantCity, txid);
-  const qrBase64 = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'M', margin: 2, width: 300 });
+  const payload   = buildPixPayload(pixKey, amount, merchantName, merchantCity, txid);
+  const qrBase64  = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'M', margin: 2, width: 300 });
 
   return { payload, qrBase64, pixKey };
 }
 
-module.exports = { generatePixQR };
+module.exports = { generatePixQR, generatePixQRDynamic };

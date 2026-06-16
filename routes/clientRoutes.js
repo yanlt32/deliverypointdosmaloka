@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/database');
-const { generatePixQR } = require('../utils/pix');
+const { generatePixQR, generatePixQRDynamic } = require('../utils/pix');
 const crypto = require('crypto');
 
 // GET /api/menu
@@ -53,9 +53,15 @@ router.get('/combos', (req, res) => {
   res.json(combos);
 });
 
+// GET /api/promotions/active
+router.get('/promotions/active', (req, res) => {
+  const promos = db.prepare('SELECT * FROM promotions WHERE active = 1 ORDER BY id DESC').all();
+  res.json(promos);
+});
+
 // POST /api/orders
 router.post('/orders', async (req, res) => {
-  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes } = req.body;
+  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for } = req.body;
 
   if (!customer_name || !customer_phone || !street || !number || !neighborhood || !items || !items.length || !payment_method) {
     return res.status(400).json({ error: 'Dados incompletos. Verifique todos os campos.' });
@@ -68,16 +74,21 @@ router.post('/orders', async (req, res) => {
   const orderNumber = 'PDM-' + Date.now().toString().slice(-6);
 
   db.prepare(`
-    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '');
+    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null);
 
   let pixData = null;
   if (payment_method === 'pix') {
     try {
-      pixData = await generatePixQR(total, orderNumber);
+      if (process.env.PAGBANK_TOKEN) {
+        pixData = await generatePixQRDynamic(total, orderNumber);
+      } else {
+        pixData = await generatePixQR(total, orderNumber);
+      }
     } catch (e) {
-      console.error('Erro ao gerar QR Pix:', e.message);
+      console.error('Erro ao gerar PIX dinâmico:', e.message);
+      try { pixData = await generatePixQR(total, orderNumber); } catch {}
     }
   }
 

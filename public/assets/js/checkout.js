@@ -4,6 +4,7 @@ const ORDER_PENDING_KEY = 'pdm_pending_order';
 
 let paymentMethod = 'pix';
 let orderPlaced = false;
+let changeFor = null;
 let pendingOrderId = null;
 let pixPollInterval = null;
 
@@ -189,11 +190,6 @@ function openPixModal() {
         <span>Aguardando confirmação automática...</span>
       </div>
 
-      <a href="https://wa.me/5511947291983?text=${msg}" target="_blank"
-         style="display:flex;align-items:center;justify-content:center;gap:.5rem;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.85rem;font-size:.88rem;font-weight:600;color:var(--white);text-decoration:none;">
-        📲 Confirmar Pagamento no WhatsApp
-      </a>
-
       <button onclick="dismissBanner(true);closePixModal();" style="width:100%;margin-top:.75rem;background:none;border:1px solid var(--border);border-radius:10px;padding:.75rem;font-size:.82rem;color:var(--gray);cursor:pointer;">
         Cancelar pedido pendente e fazer novo
       </button>
@@ -249,15 +245,46 @@ function selectPayment(method, persist = true) {
   paymentMethod = method;
   const optPix = document.getElementById('optPix');
   const optDinheiro = document.getElementById('optDinheiro');
+  const optCartao = document.getElementById('optCartao');
   const pixDisplay = document.getElementById('pixDisplay');
   const dinheiroInfo = document.getElementById('dinheiroInfo');
 
   if (optPix) optPix.classList.toggle('selected', method === 'pix');
   if (optDinheiro) optDinheiro.classList.toggle('selected', method === 'dinheiro');
+  if (optCartao) optCartao.classList.toggle('selected', method === 'cartao');
   if (pixDisplay) pixDisplay.classList.remove('visible');
   if (dinheiroInfo) dinheiroInfo.style.display = method === 'dinheiro' ? 'block' : 'none';
 
+  if (method !== 'dinheiro') { changeFor = null; }
   if (persist) saveForm();
+}
+
+function selectChangeFor(value) {
+  changeFor = value;
+  document.querySelectorAll('.change-btn').forEach(b => b.classList.remove('active'));
+
+  if (value === null) {
+    document.getElementById('changeResult').style.display = 'none';
+    document.getElementById('changeBtnNone').classList.add('active');
+    document.getElementById('changeForCustom').value = '';
+    return;
+  }
+
+  const total = getTotal();
+  const troco = value - total;
+  const result = document.getElementById('changeResult');
+
+  if (troco >= 0) {
+    document.getElementById('changeAmount').textContent = 'R$ ' + troco.toFixed(2).replace('.', ',');
+    result.style.display = 'block';
+  } else {
+    result.style.display = 'none';
+  }
+
+  // highlight quick button if matches
+  document.querySelectorAll('.change-btn:not(#changeBtnNone)').forEach(b => {
+    if (b.textContent.trim() === `R$ ${value}`) b.classList.add('active');
+  });
 }
 
 // ── CEP AUTO-FILL ────────────────────────────────────────────────────────────────
@@ -361,6 +388,7 @@ async function placeOrder() {
     notes:          document.getElementById('notes').value.trim(),
     items:          cart,
     payment_method: paymentMethod,
+    change_for:     paymentMethod === 'dinheiro' ? changeFor : null,
   };
 
   try {
@@ -426,12 +454,6 @@ function showPixDisplay(data) {
   document.getElementById('pixKeyValue').textContent = pixPayload;
 
   const total = formatBRL(data.total);
-  const msg = encodeURIComponent(
-    `Olá! Fiz um pedido no Point dos Malokas.\n\n` +
-    `*Pedido:* ${data.orderNumber}\n*Total:* ${total}\n*Pagamento:* Pix\n\nJá paguei! 🙌`
-  );
-  document.getElementById('whatsappPixBtn').href = `https://wa.me/5511947291983?text=${msg}`;
-
   renderSummary([]);
   document.getElementById('summaryTotal').textContent = total;
 

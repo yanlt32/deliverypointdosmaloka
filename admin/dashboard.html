@@ -31,6 +31,10 @@
         <span class="nav-icon"><i data-lucide="gift"></i></span>
         <span>Combos</span>
       </button>
+      <button class="nav-item" onclick="showTab('promotions')" id="navPromotions">
+        <span class="nav-icon"><i data-lucide="megaphone"></i></span>
+        <span>Promoções</span>
+      </button>
       <button class="nav-item" onclick="showTab('reports')" id="navReports">
         <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>
         <span>Relatórios</span>
@@ -63,6 +67,9 @@
           <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ Atualizar</button>
           <button class="btn btn-ghost btn-sm" onclick="openClientSearch()" style="display:flex;align-items:center;gap:.35rem;">
             <i data-lucide="search" style="width:13px;height:13px;"></i> Buscar Cliente
+          </button>
+          <button id="autoPrintBtn" class="btn btn-ghost btn-sm" onclick="toggleAutoPrint()" style="display:flex;align-items:center;gap:.35rem;">
+            🖨️ <span id="autoPrintLabel">Auto-impressão: OFF</span>
           </button>
           <a href="https://wa.me/5511947291983" target="_blank" class="btn btn-gold btn-sm">📲 WhatsApp</a>
         </div>
@@ -107,6 +114,20 @@
       </div>
       <div class="page-content">
         <div id="combosList"></div>
+      </div>
+    </div>
+
+    <!-- ── PROMOTIONS TAB ─────────────────────────────── -->
+    <div id="tabPromotions" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">PROMOÇÕES DO DIA</h1>
+        <button class="btn btn-gold btn-sm" onclick="openPromotionModal()">+ Nova Promoção</button>
+      </div>
+      <div class="page-content">
+        <p style="font-size:.85rem;color:var(--gray);margin-bottom:1.25rem;">
+          Promoções ativas aparecem em um pop-up automático quando o cliente abre o cardápio.
+        </p>
+        <div id="promotionsList"></div>
       </div>
     </div>
 
@@ -251,6 +272,63 @@
   </div>
 </div>
 
+<!-- Promotion modal -->
+<div class="modal-overlay" id="promotionModal" onclick="if(event.target===this)closePromotionModal()">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 class="modal-box-title" id="promotionModalTitle">Nova Promoção</h3>
+      <button class="modal-box-close" onclick="closePromotionModal()">✕</button>
+    </div>
+    <div class="modal-box-body">
+      <input type="hidden" id="promotionEditId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tag</label>
+          <input type="text" id="promotionTag" class="form-control" placeholder="Ex: 🔥 Hoje">
+        </div>
+        <div class="form-group">
+          <label>Título *</label>
+          <input type="text" id="promotionTitle" class="form-control" placeholder="Ex: Terça da Picanha">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mensagem</label>
+        <textarea id="promotionMessage" class="form-control" rows="2" placeholder="Descreva a promoção de hoje..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Preço (R$) <span style="color:var(--gray);font-weight:400;">— opcional</span></label>
+          <input type="number" id="promotionPrice" class="form-control" placeholder="0,00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Imagem <span style="color:var(--gray);font-weight:400;">— opcional</span></label>
+          <label class="promo-upload-label" id="promotionUploadLabel">
+            <i data-lucide="image" style="width:16px;height:16px;"></i>
+            <span id="promotionUploadText">Clique para escolher foto</span>
+            <input type="file" id="promotionImageFile" accept="image/*" style="display:none;" onchange="handlePromoImageUpload(this)">
+          </label>
+          <input type="hidden" id="promotionImageUrl">
+        </div>
+      </div>
+      <div id="promotionImagePreview" style="display:none;margin-top:.5rem;position:relative;">
+        <img id="promotionImagePreviewImg" src="" alt="Preview" style="max-height:140px;border-radius:8px;border:1px solid var(--border);object-fit:cover;width:100%;">
+        <button onclick="clearPromoImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div class="form-group" style="margin-top:.75rem;">
+        <label>Ativa</label>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-top:.4rem;">
+          <label class="switch"><input type="checkbox" id="promotionActive" checked><span class="switch-slider"></span></label>
+          <span style="font-size:.82rem;color:var(--gray);">Mostrar pop-up para os clientes</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-box-footer">
+      <button class="btn btn-ghost" onclick="closePromotionModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="savePromotion()">Salvar Promoção</button>
+    </div>
+  </div>
+</div>
+
 <!-- Client search modal -->
 <div class="modal-overlay" id="clientSearchModal" onclick="if(event.target===this)closeClientSearch()">
   <div class="modal-box" style="max-width:640px;">
@@ -288,6 +366,10 @@
   <button class="mobile-nav-item" data-tab="combos" onclick="showTab('combos')">
     <i data-lucide="gift"></i>
     <span>Combos</span>
+  </button>
+  <button class="mobile-nav-item" data-tab="promotions" onclick="showTab('promotions')">
+    <i data-lucide="megaphone"></i>
+    <span>Promoções</span>
   </button>
   <button class="mobile-nav-item" data-tab="reports" onclick="showTab('reports')">
     <i data-lucide="bar-chart-2"></i>

@@ -129,6 +129,20 @@
   </div>
 </div>
 
+<!-- Promotions modal -->
+<div class="modal-overlay" id="promotionsModal" onclick="if(event.target===this)closePromotionsModal()">
+  <div class="modal-box promo-modal-box">
+    <div class="modal-box-header">
+      <h3 class="modal-box-title">🔥 Promoções de Hoje</h3>
+      <button class="modal-box-close" onclick="closePromotionsModal()">✕</button>
+    </div>
+    <div class="modal-box-body" id="promotionsModalBody"></div>
+    <div class="modal-box-footer">
+      <button class="btn btn-gold btn-block" onclick="closePromotionsModal()">Ver Cardápio</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div class="toast-container" id="toastContainer"></div>
 

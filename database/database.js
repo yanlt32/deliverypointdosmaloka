@@ -78,6 +78,17 @@ function init() {
       sort_order INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS promotions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      message TEXT,
+      tag TEXT,
+      image_url TEXT DEFAULT '',
+      price REAL,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
       order_number TEXT UNIQUE NOT NULL,
@@ -99,6 +110,11 @@ function init() {
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     );
   `);
+
+  // migrações para bancos já existentes
+  try { db.exec("ALTER TABLE promotions ADD COLUMN image_url TEXT DEFAULT ''"); } catch {}
+  try { db.exec("ALTER TABLE promotions ADD COLUMN price REAL"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN change_for REAL"); } catch {}
 
   seed();
 }
