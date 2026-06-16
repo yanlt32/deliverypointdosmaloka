@@ -50,14 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function startPolling() {
   clearInterval(pollTimer);
-  // Reload orders from API every 30s
   pollTimer = setInterval(() => {
     if (currentTab === 'orders') loadOrders(false);
-  }, 30000);
-  // Re-render time-ago labels every 60s without hitting the API
+  }, 10000);
   setInterval(() => {
     if (currentTab === 'orders' && allOrders.length) renderOrders();
   }, 60000);
+  // Recarrega imediatamente quando o usuário volta para a aba do navegador
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && currentTab === 'orders') loadOrders(false);
+  });
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────────
