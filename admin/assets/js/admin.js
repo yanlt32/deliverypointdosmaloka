@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('usernameDisplay').textContent = username;
   document.getElementById('avatarLetter').textContent = username[0].toUpperCase();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('ordersDateFilter').value = today;
 
   showTab('orders');
@@ -211,7 +212,7 @@ function renderOrders() {
     const ago   = timeAgo(order.created_at);
     const agoClass = urg === 2 ? 'red' : urg === 1 ? 'amber' : '';
 
-    const addr = [order.street, order.number, order.complement, order.neighborhood].filter(Boolean).join(', ');
+    const addr = order.delivery_type === 'retirada' ? '🏪 Retirada no local' : [order.street, order.number, order.complement, order.neighborhood].filter(Boolean).join(', ');
     const items = order.items || [];
     const preview = items.slice(0, 2).map(i => i.productName).join(', ') + (items.length > 2 ? ` +${items.length - 2}` : '');
 

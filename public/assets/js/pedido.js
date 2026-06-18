@@ -26,16 +26,20 @@ const STATUS_CLASSES = {
 };
 
 let orderId = null;
+let orderNumber = null;
 let pollInterval = null;
+let pixKey = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   orderId = params.get('id');
 
-  if (!orderId) {
-    showError();
-    return;
-  }
+  if (!orderId) { showError(); return; }
+
+  try {
+    const s = await fetch('/api/settings').then(r => r.json());
+    pixKey = s.pix_key || s.store_phone || null;
+  } catch {}
 
   fetchOrder();
   pollInterval = setInterval(fetchOrder, 30000);
@@ -114,10 +118,81 @@ function renderOrder(order) {
   const msg = encodeURIComponent(`Olá! Quero saber o status do meu pedido ${order.order_number}. 😊`);
   document.getElementById('whatsappOrderBtn').href = `https://wa.me/5511947291983?text=${msg}`;
 
+  // PIX na entrega info
+  orderNumber = order.order_number;
+  const pixInfo = document.getElementById('pixDeliveryInfo');
+  if (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey) && pixKey) {
+    document.getElementById('pixDeliveryKey').textContent = pixKey;
+    document.getElementById('pixDeliveryAmount').textContent = `Valor: R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`;
+    if (pixInfo) pixInfo.style.display = 'block';
+  } else {
+    if (pixInfo) pixInfo.style.display = 'none';
+  }
+
+  // Botão cancelar — só mostra se status for novo ou confirmado
+  const cancelBtn = document.getElementById('cancelOrderBtn');
+  if (cancelBtn) {
+    cancelBtn.style.display = ['novo', 'confirmado'].includes(statusKey) ? 'block' : 'none';
+  }
+
   // Stop polling if delivered or cancelled
   if (statusKey === 'entregue' || statusKey === 'cancelado') {
     clearInterval(pollInterval);
   }
+}
+
+function cancelOrder() {
+  if (!orderNumber) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'cancelModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid rgba(239,68,68,.3);border-radius:20px;width:100%;max-width:360px;padding:2rem;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--white);margin-bottom:.5rem;">Cancelar Pedido?</h3>
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:1.75rem;line-height:1.6;">Tem certeza que deseja cancelar o pedido <strong style="color:var(--white);">${orderNumber}</strong>?<br>Esta ação não pode ser desfeita.</p>
+      <div style="display:flex;gap:.75rem;">
+        <button onclick="document.getElementById('cancelModal').remove()" style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:.85rem;color:var(--gray);font-size:.9rem;font-weight:600;cursor:pointer;">
+          Não, manter
+        </button>
+        <button id="confirmCancelBtn" onclick="confirmCancelOrder()" style="flex:1;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:.85rem;color:#ef4444;font-size:.9rem;font-weight:700;cursor:pointer;">
+          Sim, cancelar
+        </button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function confirmCancelOrder() {
+  const btn = document.getElementById('confirmCancelBtn');
+  btn.disabled = true;
+  btn.textContent = 'Cancelando...';
+
+  try {
+    const res = await fetch(`/api/orders/${orderNumber}/cancel`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao cancelar.');
+    document.getElementById('cancelModal')?.remove();
+    fetchOrder();
+  } catch (err) {
+    document.getElementById('cancelModal')?.remove();
+    const errOverlay = document.createElement('div');
+    errOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+    errOverlay.innerHTML = `<div style="background:var(--card);border:1px solid rgba(239,68,68,.3);border-radius:20px;width:100%;max-width:320px;padding:2rem;text-align:center;"><p style="color:var(--red);font-size:.95rem;margin-bottom:1rem;">${err.message}</p><button onclick="this.closest('[style]').remove()" style="background:var(--gold);color:var(--black);border:none;border-radius:8px;padding:.65rem 1.5rem;font-weight:700;cursor:pointer;">OK</button></div>`;
+    errOverlay.addEventListener('click', e => { if (e.target === errOverlay) errOverlay.remove(); });
+    document.body.appendChild(errOverlay);
+  }
+}
+
+function copyPixDeliveryKey() {
+  const key = document.getElementById('pixDeliveryKey').textContent;
+  const btn = document.getElementById('copyPixDeliveryBtn');
+  navigator.clipboard.writeText(key).then(() => {
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+  });
 }
 
 function renderTimeline(currentStatus) {

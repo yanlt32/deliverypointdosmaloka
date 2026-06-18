@@ -71,7 +71,10 @@ async function buscarPedidos() {
   }
 }
 
+let currentPhone = null;
+
 function renderOrders(orders, phone) {
+  currentPhone = phone;
   const title = document.getElementById('resultsTitle');
   title.textContent = `${orders.length} pedido${orders.length > 1 ? 's' : ''} encontrado${orders.length > 1 ? 's' : ''}`;
 
@@ -79,8 +82,9 @@ function renderOrders(orders, phone) {
     const color = STATUS_COLORS[order.order_status] || 'var(--gold)';
     const label = STATUS_LABELS[order.order_status] || order.order_status;
     const isActive = !['entregue', 'cancelado'].includes(order.order_status);
+    const canCancel = ['novo', 'confirmado'].includes(order.order_status);
     return `
-      <div class="order-card" style="margin-bottom:1rem;padding:0;overflow:hidden;">
+      <div class="order-card" style="margin-bottom:1rem;padding:0;overflow:hidden;" id="card-${order.order_number}">
         <div style="padding:1.25rem 1.25rem .75rem;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
             <div>
@@ -98,11 +102,47 @@ function renderOrders(orders, phone) {
           <a href="/pedido?id=${order.id}" class="btn btn-gold btn-sm" style="flex:1;text-align:center;min-width:120px;">
             <i data-lucide="${isActive ? 'map-pin' : 'eye'}" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>${isActive ? 'Acompanhar' : 'Ver detalhes'}
           </a>
+          ${canCancel ? `<button onclick="pedirCancelamento('${order.order_number}')" style="background:none;border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:.45rem .9rem;color:#ef4444;font-size:.8rem;font-weight:600;cursor:pointer;">Cancelar</button>` : ''}
         </div>
       </div>`;
   }).join('');
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function pedirCancelamento(orderNum) {
+  const overlay = document.createElement('div');
+  overlay.id = 'cancelModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid rgba(239,68,68,.3);border-radius:20px;width:100%;max-width:360px;padding:2rem;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--white);margin-bottom:.5rem;">Cancelar Pedido?</h3>
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:1.75rem;line-height:1.6;">Tem certeza que deseja cancelar o pedido <strong style="color:var(--white);">${orderNum}</strong>?<br>Esta ação não pode ser desfeita.</p>
+      <div style="display:flex;gap:.75rem;">
+        <button onclick="document.getElementById('cancelModal').remove()" style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:.85rem;color:var(--gray);font-size:.9rem;font-weight:600;cursor:pointer;">
+          Não, manter
+        </button>
+        <button onclick="executarCancelamento('${orderNum}')" style="flex:1;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:.85rem;color:#ef4444;font-size:.9rem;font-weight:700;cursor:pointer;">
+          Sim, cancelar
+        </button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function executarCancelamento(orderNum) {
+  document.getElementById('cancelModal')?.remove();
+  try {
+    const res = await fetch(`/api/orders/${orderNum}/cancel`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao cancelar.');
+    showToast('Pedido cancelado.', 'info');
+    buscarPedidos();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 function voltarBusca() {

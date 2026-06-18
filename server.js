@@ -21,6 +21,7 @@ app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use('/api', require('./routes/clientRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/pagbank', require('./routes/pagbankRoutes'));
+app.use('/api/mp', require('./routes/mpRoutes'));
 
 // Page routes
 app.get('/menu', (req, res) => res.sendFile(path.join(__dirname, 'public', 'menu.html')));
@@ -45,5 +46,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Point dos Malokas — Servidor rodando em http://localhost:${PORT}`);
   console.log(`📦 Admin: http://localhost:${PORT}/admin`);
-  console.log(`🔗 Webhook PagBank: http://localhost:${PORT}/api/pagbank/webhook`);
+  console.log(`🔗 Webhook MP: http://localhost:${PORT}/api/mp/webhook`);
 });

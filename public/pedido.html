@@ -63,6 +63,17 @@
         </div>
       </div>
 
+      <!-- PIX na entrega info -->
+      <div id="pixDeliveryInfo" style="display:none;margin:0 1.5rem 0;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.25);border-radius:12px;padding:1.25rem;">
+        <div style="font-weight:700;color:var(--gold);margin-bottom:.5rem;">📱 Pagamento via PIX</div>
+        <p style="font-size:.85rem;color:var(--gray);margin-bottom:.75rem;">Pague quando o entregador chegar usando a chave abaixo:</p>
+        <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+          <span id="pixDeliveryKey" style="font-family:monospace;font-size:.85rem;color:var(--white);word-break:break-all;flex:1;"></span>
+          <button onclick="copyPixDeliveryKey()" style="background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:.35rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;flex-shrink:0;" id="copyPixDeliveryBtn">Copiar</button>
+        </div>
+        <div id="pixDeliveryAmount" style="margin-top:.6rem;font-size:.82rem;color:var(--gray);"></div>
+      </div>
+
       <!-- Actions -->
       <div style="padding:1.5rem;display:flex;flex-direction:column;gap:.75rem;">
         <a id="whatsappOrderBtn" href="#" target="_blank" class="btn btn-gold btn-block" style="display:flex;align-items:center;justify-content:center;gap:.5rem;">
@@ -71,6 +82,9 @@
         <a href="/menu" class="btn btn-outline btn-block" style="display:flex;align-items:center;justify-content:center;gap:.5rem;">
           <i data-lucide="shopping-cart" style="width:16px;height:16px;"></i> Fazer Novo Pedido
         </a>
+        <button id="cancelOrderBtn" onclick="cancelOrder()" style="display:none;width:100%;background:none;border:1px solid var(--red);color:var(--red);border-radius:10px;padding:.75rem;font-size:.88rem;font-weight:600;cursor:pointer;">
+          Cancelar Pedido
+        </button>
       </div>
     </div>
 

@@ -1237,32 +1237,38 @@ footer {
 /* ── TOAST ──────────────────────────────────────────── */
 .toast-container {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: .5rem;
+  pointer-events: none;
 }
 .toast {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: .85rem 1.25rem;
+  border-radius: 99px;
+  padding: .7rem 1.4rem;
   display: flex;
   align-items: center;
-  gap: .75rem;
-  font-size: .88rem;
+  gap: .6rem;
+  font-size: .9rem;
+  font-weight: 600;
   color: var(--white);
-  box-shadow: var(--shadow);
-  animation: slideIn .25s ease;
-  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  animation: slideDown .25s ease;
+  pointer-events: auto;
+  white-space: nowrap;
 }
-.toast.success { border-color: var(--green); }
-.toast.error { border-color: var(--red); }
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error   { border-color: var(--red);   color: var(--red);   }
+.toast.info    { border-color: var(--gold);  }
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
 }
 
 /* ── SPINNER ────────────────────────────────────────── */

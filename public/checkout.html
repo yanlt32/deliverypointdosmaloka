@@ -26,9 +26,28 @@
     <div class="checkout-grid">
       <!-- Form side -->
       <div>
-        <!-- Dados de entrega -->
+        <!-- Tipo de pedido -->
         <div class="checkout-form-section">
-          <h3 class="checkout-form-title"><i data-lucide="map-pin" style="width:17px;height:17px;"></i> Dados para Entrega</h3>
+          <h3 class="checkout-form-title"><i data-lucide="map-pin" style="width:17px;height:17px;"></i> Como você quer receber?</h3>
+          <div class="payment-methods" style="margin-bottom:0;">
+            <label class="payment-option selected" id="optEntrega" onclick="selectDeliveryType('entrega')">
+              <input type="radio" name="delivery_type" value="entrega" checked>
+              <div class="payment-icon"><i data-lucide="bike"></i></div>
+              <div class="payment-name">Entrega</div>
+              <div class="payment-desc" id="feeHint">Taxa de entrega</div>
+            </label>
+            <label class="payment-option" id="optRetirada" onclick="selectDeliveryType('retirada')">
+              <input type="radio" name="delivery_type" value="retirada">
+              <div class="payment-icon"><i data-lucide="store"></i></div>
+              <div class="payment-name">Retirada</div>
+              <div class="payment-desc">Retire no local</div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Dados do cliente + entrega -->
+        <div class="checkout-form-section">
+          <h3 class="checkout-form-title" id="addressSectionTitle"><i data-lucide="map-pin" style="width:17px;height:17px;"></i> Dados para Entrega</h3>
           <div class="form-group">
             <label>Nome completo *</label>
             <input type="text" id="customerName" placeholder="Seu nome" autocomplete="name">
@@ -37,6 +56,8 @@
             <label>WhatsApp / Telefone *</label>
             <input type="tel" id="customerPhone" placeholder="(11) 99999-9999" autocomplete="tel">
           </div>
+          <!-- Campos de endereço — ocultados na retirada -->
+          <div id="addressFields">
           <div class="form-row" style="align-items:flex-start;">
             <div class="form-group" style="max-width:180px;">
               <label>CEP</label>
@@ -74,6 +95,7 @@
             <label>Ponto de referência</label>
             <input type="text" id="reference" placeholder="Ex: próximo ao mercado X, portão azul...">
           </div>
+          </div><!-- /addressFields -->
           <div class="form-group">
             <label>Observações do pedido</label>
             <textarea id="notes" placeholder="Alguma observação? Ex: sem cebola, ponto da carne..."></textarea>
@@ -88,7 +110,7 @@
               <input type="radio" name="payment" value="pix" checked>
               <div class="payment-icon"><i data-lucide="smartphone"></i></div>
               <div class="payment-name">Pix</div>
-              <div class="payment-desc">Pague agora — confirmação automática</div>
+              <div class="payment-desc">Pague via PIX na entrega</div>
             </label>
             <label class="payment-option" id="optDinheiro" onclick="selectPayment('dinheiro')">
               <input type="radio" name="payment" value="dinheiro">

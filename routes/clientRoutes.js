@@ -55,7 +55,7 @@ router.get('/combos', (req, res) => {
 
 // GET /api/settings (público)
 router.get('/settings', (req, res) => {
-  const rows = db.prepare("SELECT key, value FROM settings WHERE key IN ('store_open','delivery_fee','store_name','store_phone')").all();
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key IN ('store_open','delivery_fee','store_name','store_phone','pix_key')").all();
   const s = {};
   rows.forEach(r => { s[r.key] = r.value; });
   res.json(s);
@@ -69,7 +69,7 @@ router.get('/promotions/active', (req, res) => {
 
 // POST /api/orders
 router.post('/orders', async (req, res) => {
-  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for, delivery_fee } = req.body;
+  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for, delivery_fee, delivery_type } = req.body;
 
   if (!customer_name || !customer_phone || !street || !number || !neighborhood || !items || !items.length || !payment_method) {
     return res.status(400).json({ error: 'Dados incompletos. Verifique todos os campos.' });
@@ -78,23 +78,32 @@ router.post('/orders', async (req, res) => {
   const total = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
   if (total <= 0) return res.status(400).json({ error: 'Valor do pedido inválido.' });
 
+  // Rate limit: máx 2 pedidos por telefone em 15 minutos
+  const cleanPhone = customer_phone.replace(/\D/g, '');
+  if (cleanPhone.length < 8) return res.status(400).json({ error: 'Telefone inválido.' });
+  const recentCount = db.prepare(`
+    SELECT COUNT(*) as cnt FROM orders
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')',''),'+','') LIKE ?
+    AND created_at > datetime('now', '-15 minutes', 'localtime')
+  `).get(`%${cleanPhone.slice(-9)}`);
+  if (recentCount.cnt >= 2) {
+    return res.status(429).json({ error: 'Você fez muitos pedidos recentemente. Aguarde alguns minutos antes de tentar novamente.' });
+  }
+
   const id = crypto.randomUUID();
   const orderNumber = 'PDM-' + Date.now().toString().slice(-6);
 
   const fee = parseFloat(delivery_fee) || 0;
+  const dtype = delivery_type === 'retirada' ? 'retirada' : 'entrega';
   db.prepare(`
-    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for, delivery_fee)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee);
+    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for, delivery_fee, delivery_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee, dtype);
 
   let pixData = null;
-  if (payment_method === 'pix') {
+  if (payment_method === 'pix' && process.env.MP_ACCESS_TOKEN) {
     try {
-      if (process.env.PAGBANK_TOKEN) {
-        pixData = await generatePixQRDynamic(total, orderNumber);
-      } else {
-        pixData = await generatePixQR(total, orderNumber);
-      }
+      pixData = await generatePixQRDynamic(total, orderNumber);
     } catch (e) {
       console.error('Erro ao gerar PIX dinâmico:', e.message);
       try { pixData = await generatePixQR(total, orderNumber); } catch {}
@@ -107,8 +116,24 @@ router.post('/orders', async (req, res) => {
     orderNumber,
     total,
     pix: pixData,
-    pagbankLink: process.env.PAGBANK_LINK || null,
   });
+});
+
+// POST /api/orders/:orderNumber/cancel
+router.post('/orders/:orderNumber/cancel', (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+  if (!order) return res.status(404).json({ error: 'Pedido não encontrado.' });
+
+  if (!['novo', 'confirmado'].includes(order.order_status)) {
+    return res.status(400).json({ error: 'Não é possível cancelar — pedido já está sendo preparado.' });
+  }
+
+  db.prepare(`
+    UPDATE orders SET order_status = 'cancelado', updated_at = datetime('now','localtime')
+    WHERE order_number = ?
+  `).run(req.params.orderNumber);
+
+  res.json({ success: true });
 });
 
 // GET /api/orders/by-phone?phone=11999999999

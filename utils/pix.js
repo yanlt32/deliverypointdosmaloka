@@ -1,55 +1,47 @@
 const QRCode = require('qrcode');
 
-// ── PIX DINÂMICO VIA API PAGBANK ──────────────────────────────────────────────
+// ── PIX DINÂMICO VIA MERCADO PAGO ─────────────────────────────────────────────
 async function generatePixQRDynamic(amount, orderNumber) {
-  const token = process.env.PAGBANK_TOKEN;
-  const amountCents = Math.round(parseFloat(amount) * 100);
-  const expiration_date = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    .toISOString()
-    .replace('Z', '-03:00');
+  const token = process.env.MP_ACCESS_TOKEN;
+  const appUrl = process.env.APP_URL || 'http://localhost:3003';
 
-  const res = await fetch('https://api.pagseguro.com/charges', {
+  const res = await fetch('https://api.mercadopago.com/v1/payments', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      'X-Idempotency-Key': orderNumber,
     },
     body: JSON.stringify({
-      reference_id: orderNumber,
+      transaction_amount: parseFloat(parseFloat(amount).toFixed(2)),
       description: `Pedido ${orderNumber} - Point dos Malokas`,
-      amount: { value: amountCents, currency: 'BRL' },
-      payment_method: {
-        type: 'PIX',
-        installments: 1,
-        capture: true,
-        pix: { expiration_date },
-      },
+      payment_method_id: 'pix',
+      payer: { email: 'cliente@pointdosmalokas.com.br' },
+      external_reference: orderNumber,
+      notification_url: `${appUrl}/api/mp/webhook`,
+      date_of_expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`PagBank API ${res.status}: ${err.slice(0, 300)}`);
+    throw new Error(`Mercado Pago API ${res.status}: ${err.slice(0, 300)}`);
   }
 
   const data = await res.json();
+  const txData = data.point_of_interaction?.transaction_data;
+  if (!txData?.qr_code) throw new Error('Mercado Pago não retornou QR code');
 
-  // PagBank retorna qr_codes dentro de payment_method
-  const qrCode = data.payment_method?.qr_codes?.[0] || data.qr_codes?.[0];
-  if (!qrCode?.text) throw new Error('PagBank não retornou QR code no corpo da resposta');
-
-  const qrBase64 = await QRCode.toDataURL(qrCode.text, {
-    errorCorrectionLevel: 'M',
-    margin: 2,
-    width: 300,
-  });
+  // MP já retorna o QR como base64 — não precisa gerar
+  const qrBase64 = txData.qr_code_base64
+    ? `data:image/png;base64,${txData.qr_code_base64}`
+    : await QRCode.toDataURL(txData.qr_code, { errorCorrectionLevel: 'M', margin: 2, width: 300 });
 
   return {
-    payload: qrCode.text,
+    payload: txData.qr_code,
     qrBase64,
-    chargeId: data.id,
-    pixKey: null, // dinâmico não expõe a chave
+    paymentId: data.id,
+    pixKey: null,
   };
 }
 

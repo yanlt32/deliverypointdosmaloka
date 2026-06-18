@@ -3,6 +3,7 @@ const FORM_KEY = 'pdm_checkout_form';
 const ORDER_PENDING_KEY = 'pdm_pending_order';
 
 let paymentMethod = 'pix';
+let deliveryType = 'entrega';
 let orderPlaced = false;
 let changeFor = null;
 let pendingOrderId = null;
@@ -23,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const btn = document.getElementById('placeOrderBtn');
       if (btn) { btn.disabled = true; btn.textContent = '🔒 Loja fechada no momento'; btn.style.opacity = '.6'; }
     }
+    // Atualiza hint do frete no botão de entrega
+    const feeHint = document.getElementById('feeHint');
+    if (feeHint) feeHint.textContent = deliveryFee > 0 ? `+ R$ ${deliveryFee.toFixed(2).replace('.',',')} de frete` : 'Grátis';
   } catch {}
 
   const cart = getCart();
@@ -63,6 +67,7 @@ function saveForm() {
     if (el) data[id] = el.value;
   });
   data.paymentMethod = paymentMethod;
+  data.deliveryType = deliveryType;
   data.orderCity = orderCity;
   sessionStorage.setItem(FORM_KEY, JSON.stringify(data));
 }
@@ -76,6 +81,7 @@ function restoreForm() {
       if (el && saved[id]) el.value = saved[id];
     });
     if (saved.orderCity) orderCity = saved.orderCity;
+    if (saved.deliveryType) selectDeliveryType(saved.deliveryType);
     if (saved.paymentMethod) {
       paymentMethod = saved.paymentMethod;
       selectPayment(paymentMethod, false);
@@ -253,13 +259,34 @@ function renderSummary(cart) {
     </div>`).join('');
 
   const itemsTotal = getTotal();
-  const grand = itemsTotal + deliveryFee;
-  if (feeRow) feeRow.style.display = deliveryFee > 0 ? 'flex' : 'none';
-  if (feeEl) feeEl.textContent = formatBRL(deliveryFee);
+  const activeFee = deliveryType === 'retirada' ? 0 : deliveryFee;
+  const grand = itemsTotal + activeFee;
+  if (feeRow) feeRow.style.display = activeFee > 0 ? 'flex' : 'none';
+  if (feeEl) feeEl.textContent = formatBRL(activeFee);
   if (totalEl) totalEl.textContent = formatBRL(grand);
 }
 
 // ── PAYMENT SELECTION ─────────────────────────────────────────────────────────────
+
+function selectDeliveryType(type) {
+  deliveryType = type;
+  document.getElementById('optEntrega').classList.toggle('selected', type === 'entrega');
+  document.getElementById('optRetirada').classList.toggle('selected', type === 'retirada');
+
+  const addrFields = document.getElementById('addressFields');
+  const titleEl = document.getElementById('addressSectionTitle');
+  if (type === 'retirada') {
+    addrFields.style.display = 'none';
+    if (titleEl) titleEl.innerHTML = '<i data-lucide="store" style="width:17px;height:17px;"></i> Seus Dados';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } else {
+    addrFields.style.display = '';
+    if (titleEl) titleEl.innerHTML = '<i data-lucide="map-pin" style="width:17px;height:17px;"></i> Dados para Entrega';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  renderSummary(getCart());
+  saveForm();
+}
 
 function selectPayment(method, persist = true) {
   paymentMethod = method;
@@ -366,13 +393,16 @@ function formatPhone() {
 // ── VALIDATE ──────────────────────────────────────────────────────────────────────
 
 function validate() {
-  const required = [
+  const always = [
     ['customerName', 'Nome completo'],
     ['customerPhone', 'Telefone'],
+  ];
+  const addressFields = [
     ['street', 'Rua'],
     ['houseNumber', 'Número'],
     ['neighborhood', 'Bairro'],
   ];
+  const required = deliveryType === 'retirada' ? always : [...always, ...addressFields];
   for (const [id, label] of required) {
     if (!document.getElementById(id)?.value?.trim()) {
       showToast(`Preencha: ${label}`, 'error');
@@ -396,20 +426,22 @@ async function placeOrder() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Enviando pedido...';
 
+  const isPickup = deliveryType === 'retirada';
   const payload = {
     customer_name:  document.getElementById('customerName').value.trim(),
     customer_phone: document.getElementById('customerPhone').value.trim(),
-    street:         document.getElementById('street').value.trim(),
-    number:         document.getElementById('houseNumber').value.trim(),
-    complement:     document.getElementById('complement').value.trim(),
-    neighborhood:   document.getElementById('neighborhood').value.trim(),
-    city:           orderCity,
-    reference:      document.getElementById('reference').value.trim(),
+    street:         isPickup ? 'Retirada no local' : document.getElementById('street').value.trim(),
+    number:         isPickup ? '-' : document.getElementById('houseNumber').value.trim(),
+    complement:     isPickup ? '' : document.getElementById('complement').value.trim(),
+    neighborhood:   isPickup ? 'Retirada' : document.getElementById('neighborhood').value.trim(),
+    city:           isPickup ? '' : orderCity,
+    reference:      isPickup ? '' : document.getElementById('reference').value.trim(),
     notes:          document.getElementById('notes').value.trim(),
     items:          cart,
     payment_method: paymentMethod,
     change_for:     paymentMethod === 'dinheiro' ? changeFor : null,
-    delivery_fee:   deliveryFee,
+    delivery_fee:   isPickup ? 0 : deliveryFee,
+    delivery_type:  deliveryType,
   };
 
   try {
@@ -425,7 +457,8 @@ async function placeOrder() {
     clearCart();
     clearForm();
 
-    if (paymentMethod === 'pix') {
+    if (paymentMethod === 'pix' && data.pix) {
+      // Tem QR code (Mercado Pago configurado) — mostra QR e faz polling
       const orderData = {
         orderId:     data.orderId,
         orderNumber: data.orderNumber,
@@ -434,16 +467,12 @@ async function placeOrder() {
         paymentMethod: 'pix',
       };
       savePendingOrder(orderData);
-
-      // Update button to neutral state (not "waiting for payment" — that's in the pix block below)
       btn.textContent = '✅ Pedido Enviado!';
       btn.disabled = true;
-
       showPixDisplay(data);
       startPixPolling(data.orderId, false);
-
     } else {
-      // Cash / card — redirect immediately
+      // Dinheiro, cartão ou PIX na entrega — redireciona direto
       showToast('Pedido confirmado! 🎉');
       btn.textContent = '✅ Pedido Confirmado!';
       setTimeout(() => { window.location.href = `/pedido?id=${data.orderId}`; }, 1200);

@@ -35,7 +35,7 @@ router.get('/orders', (req, res) => {
     params.push(status);
   }
   if (date) {
-    query += ' AND DATE(created_at) = ?';
+    query += " AND DATE(created_at, 'localtime') = ?";
     params.push(date);
   }
 
