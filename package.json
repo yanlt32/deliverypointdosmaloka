@@ -1,7 +1,7 @@
 {
   "name": "delivery-point-dos-malokas",
   "version": "1.0.0",
-  "description": "Sistema de delivery - Point dos Malokas",
+  "description": "Sistema de delivery - Point dos Malokas Lanches e Bebidas",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

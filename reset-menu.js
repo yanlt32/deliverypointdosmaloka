@@ -1,4 +1,4 @@
-// Script para popular o cardápio completo do Point dos Malokas
+// Script para popular o cardápio completo do Point dos Malokas Lanches e Bebidas
 // Uso: node reset-menu.js
 require('dotenv').config({ path: '.env' });
 const db = require('./database/database');

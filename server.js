@@ -44,7 +44,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\n🚀 Point dos Malokas — Servidor rodando em http://localhost:${PORT}`);
+  console.log(`\n🚀 Point dos Malokas Lanches e Bebidas — Servidor rodando em http://localhost:${PORT}`);
   console.log(`📦 Admin: http://localhost:${PORT}/admin`);
   console.log(`🔗 Webhook MP: http://localhost:${PORT}/api/mp/webhook`);
 });

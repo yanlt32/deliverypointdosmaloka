@@ -138,7 +138,7 @@ function seedSettings() {
     ['delivery_fee',  '0'],
     ['pix_key',       process.env.PIX_KEY || '+5511947291983'],
     ['store_phone',   '(11) 94729-1983'],
-    ['store_name',    'Point dos Malokas'],
+    ['store_name',    'Point dos Malokas Lanches e Bebidas'],
   ].forEach(([k, v]) => ins.run(k, v));
 }
 

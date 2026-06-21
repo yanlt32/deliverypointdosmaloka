@@ -14,7 +14,7 @@ async function generatePixQRDynamic(amount, orderNumber) {
     },
     body: JSON.stringify({
       transaction_amount: parseFloat(parseFloat(amount).toFixed(2)),
-      description: `Pedido ${orderNumber} - Point dos Malokas`,
+      description: `Pedido ${orderNumber} - Point dos Malokas Lanches e Bebidas`,
       payment_method_id: 'pix',
       payer: { email: 'cliente@pointdosmalokas.com.br' },
       external_reference: orderNumber,

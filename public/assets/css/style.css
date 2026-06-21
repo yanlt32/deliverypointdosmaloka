@@ -71,6 +71,17 @@ h1, h2, h3, h4 { font-family: 'Bebas Neue', sans-serif; letter-spacing: .04em; l
   font-size: 1.4rem;
   color: var(--gold);
   letter-spacing: .06em;
+  line-height: 1.1;
+}
+.nav-logo-sub {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: .58rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-top: 1px;
 }
 .nav-links { display: flex; gap: 2rem; align-items: center; }
 .nav-links a {

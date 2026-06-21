@@ -170,7 +170,7 @@ function openPixModal() {
 
   const total = formatBRL(pending.total);
   const msg = encodeURIComponent(
-    `Olá! Tenho um pedido pendente no Point dos Malokas.\n\n` +
+    `Olá! Tenho um pedido pendente no Point dos Malokas Lanches e Bebidas.\n\n` +
     `*Pedido:* ${pending.orderNumber}\n*Total:* ${total}\n*Pagamento:* Pix\n\n` +
     `Já realizei o pagamento! 🙌`
   );
