@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/database');
 const { generatePixQR, generatePixQRDynamic } = require('../utils/pix');
+const { PUBLIC_KEY } = require('../utils/push');
 const crypto = require('crypto');
 
 // GET /api/menu
@@ -78,7 +79,7 @@ router.post('/orders', async (req, res) => {
   const total = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
   if (total <= 0) return res.status(400).json({ error: 'Valor do pedido inválido.' });
 
-  // Rate limit: máx 2 pedidos por telefone em 15 minutos
+  // Rate limit: máx 5 pedidos por telefone em 15 minutos
   const cleanPhone = customer_phone.replace(/\D/g, '');
   if (cleanPhone.length < 8) return res.status(400).json({ error: 'Telefone inválido.' });
   const recentCount = db.prepare(`
@@ -86,7 +87,7 @@ router.post('/orders', async (req, res) => {
     WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')',''),'+','') LIKE ?
     AND created_at > datetime('now', '-15 minutes', 'localtime')
   `).get(`%${cleanPhone.slice(-9)}`);
-  if (recentCount.cnt >= 2) {
+  if (recentCount.cnt >= 5) {
     return res.status(429).json({ error: 'Você fez muitos pedidos recentemente. Aguarde alguns minutos antes de tentar novamente.' });
   }
 
@@ -104,6 +105,7 @@ router.post('/orders', async (req, res) => {
   if (payment_method === 'pix' && process.env.MP_ACCESS_TOKEN) {
     try {
       pixData = await generatePixQRDynamic(total, orderNumber);
+      db.prepare('UPDATE orders SET pix_dynamic = 1 WHERE id = ?').run(id);
     } catch (e) {
       console.error('Erro ao gerar PIX dinâmico:', e.message);
       try { pixData = await generatePixQR(total, orderNumber); } catch {}
@@ -117,6 +119,27 @@ router.post('/orders', async (req, res) => {
     total,
     pix: pixData,
   });
+});
+
+// GET /api/push/vapid-public-key
+router.get('/push/vapid-public-key', (req, res) => {
+  res.json({ key: PUBLIC_KEY || null });
+});
+
+// POST /api/orders/:id/subscribe — salva inscrição push para esse pedido
+router.post('/orders/:id/subscribe', (req, res) => {
+  const { endpoint, keys } = req.body;
+  if (!endpoint || !keys) return res.status(400).json({ error: 'Dados de inscrição inválidos.' });
+
+  const order = db.prepare('SELECT id FROM orders WHERE id = ?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Pedido não encontrado.' });
+
+  db.prepare(`
+    INSERT INTO push_subscriptions (order_id, endpoint, keys_json) VALUES (?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET order_id = excluded.order_id
+  `).run(req.params.id, endpoint, JSON.stringify(keys));
+
+  res.json({ success: true });
 });
 
 // POST /api/orders/:orderNumber/cancel

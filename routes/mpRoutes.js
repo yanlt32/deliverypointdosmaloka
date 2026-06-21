@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../database/database');
+const { notifyOrderStatus } = require('../utils/push');
 
 function confirmOrder(orderNumber, valor) {
   const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber);
@@ -28,6 +29,7 @@ function confirmOrder(orderNumber, valor) {
   `).run(orderNumber);
 
   console.log(`✅ [MP] Pago: ${orderNumber} — R$ ${valor.toFixed(2)}`);
+  notifyOrderStatus(order.id, orderNumber, 'confirmado').catch(() => {});
 }
 
 // POST /api/mp/webhook

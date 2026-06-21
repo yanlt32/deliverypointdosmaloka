@@ -21,8 +21,12 @@ services:
         value: Point dos Malokas
       - key: PIX_MERCHANT_CITY
         value: Sao Paulo
-      - key: PAGBANK_LINK
-        value: https://pagbank.com.br/pointdosmalokas
+      - key: MP_ACCESS_TOKEN
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        value: BCcVZeMDPQHidvNvor5UEqchWoSMeBLikkV4OSF7XWwqvAM82YercuuWNhYctOk4sRzrJ4oJfonQtgOJt-LoYc8
+      - key: VAPID_PRIVATE_KEY
+        sync: false
       - key: ADMIN_USER
         value: admin
       - key: ADMIN_PASS

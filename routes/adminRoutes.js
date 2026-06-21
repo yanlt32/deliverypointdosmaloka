@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database/database');
 const auth = require('../middleware/auth');
+const { notifyOrderStatus } = require('../utils/push');
 
 const JWT_SECRET = () => process.env.JWT_SECRET || 'secret_dev';
 
@@ -77,6 +78,10 @@ router.patch('/orders/:id/status', (req, res) => {
   `).run(status, req.params.id);
 
   if (result.changes === 0) return res.status(404).json({ error: 'Pedido não encontrado.' });
+
+  const order = db.prepare('SELECT order_number FROM orders WHERE id = ?').get(req.params.id);
+  notifyOrderStatus(req.params.id, order.order_number, status).catch(() => {});
+
   res.json({ success: true });
 });
 

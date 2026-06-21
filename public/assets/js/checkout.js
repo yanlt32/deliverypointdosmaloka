@@ -472,10 +472,9 @@ async function placeOrder() {
       showPixDisplay(data);
       startPixPolling(data.orderId, false);
     } else {
-      // Dinheiro, cartão ou PIX na entrega — redireciona direto
-      showToast('Pedido confirmado! 🎉');
+      // Dinheiro, cartão ou PIX na entrega — mostra modal de confirmação
       btn.textContent = '✅ Pedido Confirmado!';
-      setTimeout(() => { window.location.href = `/pedido?id=${data.orderId}`; }, 1200);
+      showOrderConfirmedModal(data);
     }
 
   } catch (err) {
@@ -484,6 +483,24 @@ async function placeOrder() {
     btn.innerHTML = 'Confirmar Pedido →';
     orderPlaced = false;
   }
+}
+
+// ── ORDER CONFIRMED MODAL ──────────────────────────────────────────────────────────
+
+function showOrderConfirmedModal(data) {
+  const overlay = document.createElement('div');
+  overlay.id = 'orderConfirmedModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid rgba(34,197,94,.4);border-radius:20px;width:100%;max-width:380px;padding:2rem;text-align:center;">
+      <div style="font-size:3.5rem;margin-bottom:1rem;">✅</div>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--green);margin-bottom:.5rem;">PEDIDO CONFIRMADO!</h3>
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:1.75rem;line-height:1.6;">
+        Pedido <strong style="color:var(--white);">${data.orderNumber}</strong> recebido com sucesso.<br>Total: <strong style="color:var(--gold);">${formatBRL(data.total)}</strong>
+      </p>
+      <a href="/pedido?id=${data.orderId}" class="btn btn-gold btn-lg btn-block">📦 Acompanhar Meu Pedido →</a>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ── PIX DISPLAY (inline, shown in the checkout form after placing order) ──────────

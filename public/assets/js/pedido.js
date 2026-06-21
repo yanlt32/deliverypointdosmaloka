@@ -43,7 +43,64 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   fetchOrder();
   pollInterval = setInterval(fetchOrder, 30000);
+  setupNotifyBanner();
 });
+
+// ── NOTIFICAÇÕES PUSH ─────────────────────────────────────────────────────────────
+
+function setupNotifyBanner() {
+  const banner = document.getElementById('notifyBanner');
+  if (!banner) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission === 'granted') return; // já ativado em algum pedido
+  banner.style.display = 'flex';
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function ativarNotificacoes() {
+  const btn = document.getElementById('notifyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Ativando...';
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      btn.disabled = false;
+      btn.textContent = 'Ativar Notificações';
+      return;
+    }
+
+    const { key } = await fetch('/api/push/vapid-public-key').then(r => r.json());
+    if (!key) {
+      btn.textContent = 'Indisponível';
+      return;
+    }
+
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key),
+    });
+
+    await fetch(`/api/orders/${orderId}/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    });
+
+    document.getElementById('notifyBanner').innerHTML =
+      '<div style="font-size:.85rem;color:var(--green);">🔔 Notificações ativadas! Você vai receber avisos quando o status mudar.</div>';
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Ativar Notificações';
+  }
+}
 
 async function fetchOrder() {
   try {

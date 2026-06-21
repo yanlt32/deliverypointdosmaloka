@@ -234,7 +234,7 @@ function renderOrders() {
           <div class="order-total">${formatBRL(order.total)}</div>
           <div class="order-payment">
             ${order.payment_method === 'pix'
-              ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : '<span class="pix-pending-badge">⏳ Aguardando PIX</span>'}`
+              ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : order.pix_dynamic ? '<span class="pix-pending-badge">⏳ Aguardando PIX</span>' : '<span class="pix-pending-badge">💵 PIX na Entrega</span>'}`
               : order.payment_method === 'cartao'
                 ? `${ico('credit-card',12)} Cartão na Entrega`
                 : `${ico('banknote',12)} Dinheiro na Entrega`}
@@ -384,7 +384,10 @@ function printOrder(orderId) {
   <hr class="p-divider">
   <div class="p-pay">💳 ${payMap[order.payment_method] || order.payment_method}</div>
   ${order.payment_method === 'pix' && order.payment_status !== 'pago'
-    ? '<div class="p-pix-pending">⏳ Aguardando confirmação do PIX</div>' : ''}
+    ? (order.pix_dynamic
+        ? '<div class="p-pix-pending">⏳ Aguardando confirmação do PIX</div>'
+        : '<div class="p-pix-pending">💵 Pague via PIX na entrega</div>')
+    : ''}
   ${order.payment_method === 'pix' && order.payment_status === 'pago'
     ? '<div class="p-pix-pending" style="color:green;">✅ PIX Confirmado</div>' : ''}
   ${order.change_for > 0 ? `

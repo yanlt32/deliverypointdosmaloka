@@ -878,7 +878,7 @@ footer {
 }
 
 /* ── PROMOTIONS MODAL ─────────────────────────────────── */
-.promo-modal-box { max-width: 480px; }
+.promo-modal-box { max-width: 560px; }
 .promo-card {
   background: var(--dark);
   border: 1px solid var(--border);
@@ -943,10 +943,10 @@ footer {
 
 .promo-card-img {
   width: 100%;
-  max-height: 180px;
+  max-height: 360px;
   object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: .75rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
 }
 .promo-card-footer {
   display: flex;
