@@ -269,9 +269,13 @@ function seed() {
     const pastel1 = iProd.run(pastelCat, 'Pastel Tradicional', 'Feito na hora · Frito na hora · Escolha o recheio', 1, 0, null, 1).lastInsertRowid;
     ['Carne','Queijo','Frango','Calabresa'].forEach((n, i) => iVar.run(pastel1, n, 10.00, i + 1));
 
-    const pastel2 = iProd.run(pastelCat, 'Pastel 2 Sabores', 'Escolha 2 recheios · Feito na hora', 0, 1, 12.00, 2).lastInsertRowid;
-    ['Carne','Queijo','Frango','Calabresa','Bacon','Cheddar','Catupiry','Ovo','Milho']
-      .forEach((n, i) => { iOpt.run(pastel2, null, 'Recheio 1', n, 0, i); iOpt.run(pastel2, null, 'Recheio 2', n, 0, i); });
+    const pastel2 = iProd.run(pastelCat, 'Pastel 2 Sabores', 'Feito na hora · Escolha o sabor', 1, 0, null, 2).lastInsertRowid;
+    [
+      'Carne com Queijo','Carne c/ Cheddar','Carne c/ Catupiry','Carne c/ Ovo','Carne c/ Bacon',
+      'Frango c/ Catupiry','Frango c/ Queijo','Frango c/ Cheddar','Frango c/ Bacon',
+      'Calabresa c/ Queijo','Calabresa c/ Catupiry','Calabresa c/ Bacon','Calabresa c/ Cheddar',
+      'Queijo c/ Milho','Três Queijos','Bauru','Portuguesa','Pizza','Bacon Queijo',
+    ].forEach((n, i) => iVar.run(pastel2, n, 12.00, i + 1));
 
     const pastel3 = iProd.run(pastelCat, 'Pastel Premium', 'Recheios especiais · R$ 15,00 cada', 1, 0, null, 3).lastInsertRowid;
     ['Camarão c/ Queijo','Camarão c/ Catupiry','Carne Seca c/ Queijo','Carne Seca c/ Catupiry']
