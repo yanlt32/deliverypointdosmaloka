@@ -30,14 +30,14 @@
         <div class="checkout-form-section">
           <h3 class="checkout-form-title"><i data-lucide="map-pin" style="width:17px;height:17px;"></i> Como você quer receber?</h3>
           <div class="payment-methods" style="margin-bottom:0;">
-            <label class="payment-option selected" id="optEntrega" onclick="selectDeliveryType('entrega')">
-              <input type="radio" name="delivery_type" value="entrega" checked>
+            <label class="payment-option disabled" id="optEntrega" style="opacity:.5;cursor:not-allowed;">
+              <input type="radio" name="delivery_type" value="entrega" disabled>
               <div class="payment-icon"><i data-lucide="bike"></i></div>
               <div class="payment-name">Entrega</div>
-              <div class="payment-desc" id="feeHint">Taxa de entrega</div>
+              <div class="payment-desc" id="feeHint">Em breve 🚧</div>
             </label>
-            <label class="payment-option" id="optRetirada" onclick="selectDeliveryType('retirada')">
-              <input type="radio" name="delivery_type" value="retirada">
+            <label class="payment-option selected" id="optRetirada" onclick="selectDeliveryType('retirada')">
+              <input type="radio" name="delivery_type" value="retirada" checked>
               <div class="payment-icon"><i data-lucide="store"></i></div>
               <div class="payment-name">Retirada</div>
               <div class="payment-desc">Retire no local</div>

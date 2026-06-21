@@ -166,10 +166,14 @@ db.transaction(() => {
   const pastel1 = iProd.run(pastelCat, 'Pastel Tradicional', 'Feito na hora · Frito na hora · Escolha o recheio', 1, 0, null, 1).lastInsertRowid;
   ['Carne','Queijo','Frango','Calabresa'].forEach((n, i) => iVar.run(pastel1, n, 10.00, i + 1));
 
-  const pastel2 = iProd.run(pastelCat, 'Pastel 2 Sabores', 'Escolha 2 recheios · Feito na hora', 0, 1, 12.00, 2).lastInsertRowid;
-  const recheios2 = ['Carne','Queijo','Frango','Calabresa','Bacon','Cheddar','Catupiry','Ovo','Milho'];
-  recheios2.forEach((n, i) => iOpt.run(pastel2, null, 'Recheio 1', n, 0, i));
-  recheios2.forEach((n, i) => iOpt.run(pastel2, null, 'Recheio 2', n, 0, i));
+  const pastel2 = iProd.run(pastelCat, 'Pastel 2 Sabores', 'Feito na hora · Escolha o sabor', 1, 0, null, 2).lastInsertRowid;
+  const sabores2 = [
+    'Carne com Queijo','Carne c/ Cheddar','Carne c/ Catupiry','Carne c/ Ovo','Carne c/ Bacon',
+    'Frango c/ Catupiry','Frango c/ Queijo','Frango c/ Cheddar','Frango c/ Bacon',
+    'Calabresa c/ Queijo','Calabresa c/ Catupiry','Calabresa c/ Bacon','Calabresa c/ Cheddar',
+    'Queijo c/ Milho','Três Queijos','Bauru','Portuguesa','Pizza','Bacon Queijo',
+  ];
+  sabores2.forEach((n, i) => iVar.run(pastel2, n, 12.00, i + 1));
 
   const pastel3 = iProd.run(pastelCat, 'Pastel Premium', 'Recheios especiais · R$ 15,00 cada', 1, 0, null, 3).lastInsertRowid;
   [
@@ -200,7 +204,7 @@ db.transaction(() => {
   iVar.run(caipGour, 'Com Velho Barreiro',15.99, 2);
   iVar.run(caipGour, 'Com Sakê',          20.00, 3);
   iVar.run(caipGour, 'Com Jurupinga',     25.00, 4);
-  ['Abacaxi','Abacaxi c/ Hortelã','Abacaxi ao Vinho','Morango','Morando c/ Hortelã','Morango ao Vinho',
+  ['Abacaxi','Abacaxi c/ Hortelã','Abacaxi ao Vinho','Morango','Morango c/ Hortelã','Morango ao Vinho',
    'Maracujá','Kiwi','Kiwi c/ Hortelã','Limão','Limão c/ Hortelã','Melancia','Melancia c/ Hortelã','Manga']
     .forEach((n, i) => iOpt.run(caipGour, null, 'Sabor', n, 0, i));
 
@@ -240,13 +244,6 @@ db.transaction(() => {
   iProd.run(bebCat, 'Refrigerante 2L',    'Coca-Cola, Guaraná ou Sprite', 0, 0, 12.00, 2);
   iProd.run(bebCat, 'Água Mineral',       'Garrafa 500ml',                0, 0, 4.00,  3);
   iProd.run(bebCat, 'Vinho Quente',       'Copo quentinho para a noite',  0, 0, 7.00,  4);
-
-  // ── COMBOS ────────────────────────────────────────────────────────────────
-  iCombo.run('Oferta Açaí',       '❄️ Oferta',    'Dois açaís 500ml por R$20. Geladinho!',                         20.00, 'paid', 1);
-  iCombo.run('Combo Pastel',      '🔥 Promoção',  '6 pastéis + refrigerante 2L. Perfeito pra galera!',             50.00, 'paid', 2);
-  iCombo.run('Vinho Quente',      '🍷 Especial',  'Copo quentinho para noites frias!',                              7.00, 'paid', 3);
-  iCombo.run('Combo Black Label', '👑 Elite',     'Whisky Original + 4 Gelo de Coco + 4 Red Bull.',               349.90, 'paid', 4);
-  iCombo.run('Gin Tanqueray VIP', '💎 VIP',       'Tanqueray + Tônica + Botânicos Especiais.',                     289.00, 'paid', 5);
 
 })();
 
