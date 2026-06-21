@@ -245,13 +245,6 @@ db.transaction(() => {
   iProd.run(bebCat, 'Água Mineral',       'Garrafa 500ml',                0, 0, 4.00,  3);
   iProd.run(bebCat, 'Vinho Quente',       'Copo quentinho para a noite',  0, 0, 7.00,  4);
 
-  // ── COMBOS ────────────────────────────────────────────────────────────────
-  iCombo.run('Oferta Açaí',       '❄️ Oferta',    'Dois açaís 500ml por R$20. Geladinho!',                         20.00, 'paid', 1);
-  iCombo.run('Combo Pastel',      '🔥 Promoção',  '6 pastéis + refrigerante 2L. Perfeito pra galera!',             50.00, 'paid', 2);
-  iCombo.run('Vinho Quente',      '🍷 Especial',  'Copo quentinho para noites frias!',                              7.00, 'paid', 3);
-  iCombo.run('Combo Black Label', '👑 Elite',     'Whisky Original + 4 Gelo de Coco + 4 Red Bull.',               349.90, 'paid', 4);
-  iCombo.run('Gin Tanqueray VIP', '💎 VIP',       'Tanqueray + Tônica + Botânicos Especiais.',                     289.00, 'paid', 5);
-
 })();
 
 const cats = db.prepare('SELECT COUNT(*) as c FROM categories').get();

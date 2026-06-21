@@ -3,7 +3,7 @@ const FORM_KEY = 'pdm_checkout_form';
 const ORDER_PENDING_KEY = 'pdm_pending_order';
 
 let paymentMethod = 'pix';
-let deliveryType = 'entrega';
+let deliveryType = 'retirada'; // entrega temporariamente desativada — em construção
 let orderPlaced = false;
 let changeFor = null;
 let pendingOrderId = null;
@@ -24,10 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const btn = document.getElementById('placeOrderBtn');
       if (btn) { btn.disabled = true; btn.textContent = '🔒 Loja fechada no momento'; btn.style.opacity = '.6'; }
     }
-    // Atualiza hint do frete no botão de entrega
-    const feeHint = document.getElementById('feeHint');
-    if (feeHint) feeHint.textContent = deliveryFee > 0 ? `+ R$ ${deliveryFee.toFixed(2).replace('.',',')} de frete` : 'Grátis';
   } catch {}
+  selectDeliveryType('retirada');
 
   const cart = getCart();
   const pending = getPendingOrder();
@@ -170,7 +168,7 @@ function openPixModal() {
 
   const total = formatBRL(pending.total);
   const msg = encodeURIComponent(
-    `Olá! Tenho um pedido pendente no Point dos Malokas.\n\n` +
+    `Olá! Tenho um pedido pendente no Point dos Malokas Lanches e Bebidas.\n\n` +
     `*Pedido:* ${pending.orderNumber}\n*Total:* ${total}\n*Pagamento:* Pix\n\n` +
     `Já realizei o pagamento! 🙌`
   );
@@ -269,7 +267,9 @@ function renderSummary(cart) {
 // ── PAYMENT SELECTION ─────────────────────────────────────────────────────────────
 
 function selectDeliveryType(type) {
-  deliveryType = type;
+  // Entrega temporariamente desativada (em construção) — força retirada
+  deliveryType = type === 'entrega' ? 'retirada' : type;
+  type = deliveryType;
   document.getElementById('optEntrega').classList.toggle('selected', type === 'entrega');
   document.getElementById('optRetirada').classList.toggle('selected', type === 'retirada');
 

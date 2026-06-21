@@ -395,7 +395,7 @@ function printOrder(orderId) {
 
   <hr class="p-divider">
   <div class="p-footer">Impresso em ${now}</div>
-  <div class="p-footer">Point dos Malokas — obrigado! 🤙</div>
+  <div class="p-footer">Point dos Malokas Lanches e Bebidas — obrigado! 🤙</div>
 </body></html>`;
 
   const iframe = document.createElement('iframe');
