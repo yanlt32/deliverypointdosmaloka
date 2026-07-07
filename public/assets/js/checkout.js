@@ -290,15 +290,14 @@ function selectDeliveryType(type) {
 
 function selectPayment(method, persist = true) {
   paymentMethod = method;
-  const optPix = document.getElementById('optPix');
-  const optDinheiro = document.getElementById('optDinheiro');
-  const optCartao = document.getElementById('optCartao');
+  const idMap = { pix:'optPix', dinheiro:'optDinheiro', cartao:'optCartao', alelo:'optAlelo', vr:'optVR' };
+  Object.entries(idMap).forEach(([m, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('selected', m === method);
+  });
+
   const pixDisplay = document.getElementById('pixDisplay');
   const dinheiroInfo = document.getElementById('dinheiroInfo');
-
-  if (optPix) optPix.classList.toggle('selected', method === 'pix');
-  if (optDinheiro) optDinheiro.classList.toggle('selected', method === 'dinheiro');
-  if (optCartao) optCartao.classList.toggle('selected', method === 'cartao');
   if (pixDisplay) pixDisplay.classList.remove('visible');
   if (dinheiroInfo) dinheiroInfo.style.display = method === 'dinheiro' ? 'block' : 'none';
 

@@ -529,10 +529,13 @@ function renderModalBody(product) {
   if (product.has_options && product.options && Object.keys(product.options).length) {
     Object.entries(product.options).forEach(([group, opts]) => {
       const isExtra = group === 'Adicionais Extras';
-      const maxSelect = opts[0]?.maxSelect || null;
-      const groupLabel = maxSelect
-        ? `${group} <span style="color:var(--gray);font-size:.7rem;">(escolha ${maxSelect === 1 ? '1 opção' : `até ${maxSelect}`})</span>`
-        : group;
+      const isGelado = group === 'Gelado';
+      const maxSelect = isGelado ? null : (opts[0]?.maxSelect || null);
+      const groupLabel = isGelado
+        ? `${group} <span style="color:var(--gray);font-size:.7rem;">(opcional — escolha à vontade)</span>`
+        : maxSelect
+          ? `${group} <span style="color:var(--gray);font-size:.7rem;">(escolha ${maxSelect === 1 ? '1 opção' : `até ${maxSelect}`})</span>`
+          : group;
       html += `<div class="options-group">
         <div class="options-group-title">
           ${groupLabel}${isExtra ? ' <span style="color:var(--green);font-size:.7rem;">(+ preço)</span>' : ''}

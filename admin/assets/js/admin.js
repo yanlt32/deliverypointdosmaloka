@@ -237,7 +237,11 @@ function renderOrders() {
               ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : order.pix_dynamic ? '<span class="pix-pending-badge">⏳ Aguardando PIX</span>' : '<span class="pix-pending-badge">💵 PIX na Entrega</span>'}`
               : order.payment_method === 'cartao'
                 ? `${ico('credit-card',12)} Cartão na Entrega`
-                : `${ico('banknote',12)} Dinheiro na Entrega`}
+                : order.payment_method === 'alelo'
+                  ? `${ico('credit-card',12)} Alelo`
+                  : order.payment_method === 'vr'
+                    ? `${ico('credit-card',12)} VR Refeição`
+                    : `${ico('banknote',12)} Dinheiro na Entrega`}
           </div>
         </div>
         <div onclick="event.stopPropagation();">
@@ -303,7 +307,7 @@ function printOrder(orderId) {
   const notes = order.notes ? `<div class="p-block p-obs"><strong>⚠️ Observações:</strong> ${order.notes}</div>` : '';
 
   const statusMap = { novo:'Novo', confirmado:'Confirmado', preparando:'Preparando', saiu:'Saiu para entrega', entregue:'Entregue', cancelado:'Cancelado' };
-  const payMap    = { pix:'PIX', dinheiro:'Dinheiro na Entrega', cartao:'Cartão na Entrega' };
+  const payMap    = { pix:'PIX', dinheiro:'Dinheiro na Entrega', cartao:'Cartão na Entrega', alelo:'Alelo', vr:'VR Refeição' };
 
   const items = (order.items || []).map(item => {
     const opts = item.optionsSummary ? `<div class="p-item-opts">${item.optionsSummary.replace(/ \| /g, '<br>')}</div>` : '';
@@ -512,7 +516,11 @@ function renderOrderDetail(order) {
             ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : '<span class="pix-pending-badge">⏳ Aguardando PIX</span>'}`
             : order.payment_method === 'cartao'
               ? `${ico('credit-card',12)} Cartão na Entrega`
-              : `${ico('banknote',12)} Dinheiro na Entrega`}
+              : order.payment_method === 'alelo'
+                ? `${ico('credit-card',12)} Alelo`
+                : order.payment_method === 'vr'
+                  ? `${ico('credit-card',12)} VR Refeição`
+                  : `${ico('banknote',12)} Dinheiro na Entrega`}
         </div>
       </div>
 
@@ -985,7 +993,7 @@ function renderReports(data) {
   document.getElementById('reportByPayment').innerHTML = byPayment.length
     ? byPayment.map(p => `
         <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);">
-          <span>${p.payment_method === 'pix' ? '📱 Pix' : p.payment_method === 'cartao' ? '💳 Cartão' : '💵 Dinheiro'} (${p.count}x)</span>
+          <span>${p.payment_method === 'pix' ? '📱 Pix' : p.payment_method === 'cartao' ? '💳 Cartão' : p.payment_method === 'alelo' ? '💳 Alelo' : p.payment_method === 'vr' ? '💳 VR Refeição' : '💵 Dinheiro'} (${p.count}x)</span>
           <span style="color:var(--gold);font-family:'Bebas Neue',sans-serif;">${formatBRL(p.total)}</span>
         </div>`).join('')
     : '<div style="color:var(--gray);font-size:.85rem;">Sem dados</div>';
