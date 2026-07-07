@@ -307,7 +307,7 @@ function printOrder(orderId) {
   const notes = order.notes ? `<div class="p-block p-obs"><strong>⚠️ Observações:</strong> ${order.notes}</div>` : '';
 
   const statusMap = { novo:'Novo', confirmado:'Confirmado', preparando:'Preparando', saiu:'Saiu para entrega', entregue:'Entregue', cancelado:'Cancelado' };
-  const payMap    = { pix:'PIX', dinheiro:'Dinheiro na Entrega', cartao:'Cartão na Entrega', alelo:'Alelo', vr:'VR Refeição' };
+  const payMap    = { pix:'PIX', dinheiro:'Dinheiro na Entrega', cartao:'Cartão na Entrega', alelo:'VR Refeição (Alelo)', vr:'VR Refeição (Alelo)' };
 
   const items = (order.items || []).map(item => {
     const opts = item.optionsSummary ? `<div class="p-item-opts">${item.optionsSummary.replace(/ \| /g, '<br>')}</div>` : '';
