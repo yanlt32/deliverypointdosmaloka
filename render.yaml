@@ -16,7 +16,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: PIX_KEY
-        value: "11961962855"
+        value: "+5511961962855"
       - key: PIX_MERCHANT_NAME
         value: Vanice de Souza Santos
       - key: PIX_MERCHANT_CITY

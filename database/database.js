@@ -135,6 +135,7 @@ function init() {
   try { db.exec("ALTER TABLE orders ADD COLUMN pix_dynamic INTEGER DEFAULT 0"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN pix_claimed INTEGER DEFAULT 0"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN pix_payload TEXT"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN awaiting_pix_claim INTEGER DEFAULT 0"); } catch {}
   db.exec(`UPDATE product_options SET max_select = 1 WHERE option_group IN ('Sabor','Sabores','Recheio 1','Recheio 2') AND max_select IS NULL`);
   db.exec(`UPDATE product_options SET max_select = 3 WHERE option_group = 'Recheios (até 3)' AND max_select IS NULL`);
 
@@ -150,7 +151,7 @@ function seedSettings() {
   [
     ['store_open',    '1'],
     ['delivery_fee',  '0'],
-    ['pix_key',       process.env.PIX_KEY || '11961962855'],
+    ['pix_key',       process.env.PIX_KEY || '+5511961962855'],
     ['store_phone',   '(11) 94729-1983'],
     ['store_name',    'Point dos Malokas Lanches e Bebidas'],
   ].forEach(([k, v]) => ins.run(k, v));

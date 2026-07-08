@@ -70,7 +70,7 @@ router.get('/promotions/active', (req, res) => {
 
 // POST /api/orders
 router.post('/orders', async (req, res) => {
-  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for, delivery_fee, delivery_type } = req.body;
+  const { customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items, payment_method, notes, change_for, delivery_fee, delivery_type, pix_pay_option } = req.body;
 
   if (!customer_name || !customer_phone || !street || !number || !neighborhood || !items || !items.length || !payment_method) {
     return res.status(400).json({ error: 'Dados incompletos. Verifique todos os campos.' });
@@ -100,6 +100,11 @@ router.post('/orders', async (req, res) => {
     INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for, delivery_fee, delivery_type)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee, dtype);
+
+  // PIX "pagar agora" — ocultar do admin até o cliente confirmar pagamento
+  if (payment_method === 'pix' && pix_pay_option === 'antes') {
+    db.prepare("UPDATE orders SET awaiting_pix_claim = 1 WHERE id = ?").run(id);
+  }
 
   let pixData = null;
   if (payment_method === 'pix') {
@@ -157,7 +162,7 @@ router.post('/orders/:id/subscribe', (req, res) => {
 router.post('/orders/:orderNumber/pix-claimed', (req, res) => {
   const order = db.prepare('SELECT id FROM orders WHERE order_number = ?').get(req.params.orderNumber);
   if (!order) return res.status(404).json({ error: 'Pedido não encontrado.' });
-  db.prepare("UPDATE orders SET pix_claimed = 1, updated_at = datetime('now','localtime') WHERE order_number = ?").run(req.params.orderNumber);
+  db.prepare("UPDATE orders SET pix_claimed = 1, awaiting_pix_claim = 0, updated_at = datetime('now','localtime') WHERE order_number = ?").run(req.params.orderNumber);
   res.json({ success: true });
 });
 

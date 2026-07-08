@@ -456,6 +456,7 @@ async function placeOrder() {
     change_for:     paymentMethod === 'dinheiro' ? changeFor : null,
     delivery_fee:   isPickup ? 0 : deliveryFee,
     delivery_type:  deliveryType,
+    pix_pay_option: paymentMethod === 'pix' ? pixPayOption : null,
   };
 
   try {
@@ -565,7 +566,29 @@ async function claimPixAndRedirect() {
     await fetch(`/api/orders/${_checkoutOrderData.orderNumber}/pix-claimed`, { method: 'POST' });
   } catch {}
 
-  window.location.href = `/pedido?id=${_checkoutOrderData.orderId}`;
+  const { orderId, orderNumber } = _checkoutOrderData;
+  const msg = encodeURIComponent(`Olá! Paguei o PIX do pedido ${orderNumber}. Segue o comprovante!`);
+  const wppLink = `https://wa.me/5511947291983?text=${msg}`;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid rgba(34,197,94,.4);border-radius:20px;width:100%;max-width:380px;padding:2rem;text-align:center;">
+      <div style="font-size:3.5rem;margin-bottom:1rem;">✅</div>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--green);margin-bottom:.5rem;">PAGAMENTO REGISTRADO!</h3>
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:1.75rem;line-height:1.6;">
+        Mostre o comprovante do PIX ao retirar seu pedido,<br>ou envie pelo WhatsApp da loja.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:.75rem;">
+        <a href="${wppLink}" target="_blank" style="display:block;background:var(--gold);color:var(--black);font-weight:700;font-size:.95rem;border-radius:10px;padding:.85rem;text-decoration:none;text-align:center;">
+          📱 Enviar Comprovante no WhatsApp
+        </a>
+        <a href="/pedido?id=${orderId}" style="display:block;background:none;border:1px solid var(--border);color:var(--white);border-radius:10px;padding:.75rem;font-size:.88rem;font-weight:600;text-decoration:none;text-align:center;">
+          Ver Meu Pedido
+        </a>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ── PIX PAYMENT POLLING ────────────────────────────────────────────────────────────
