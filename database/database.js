@@ -150,10 +150,15 @@ function seedSettings() {
   [
     ['store_open',    '1'],
     ['delivery_fee',  '0'],
-    ['pix_key',       process.env.PIX_KEY || '+5511947291983'],
+    ['pix_key',       process.env.PIX_KEY || '11961962855'],
     ['store_phone',   '(11) 94729-1983'],
     ['store_name',    'Point dos Malokas Lanches e Bebidas'],
   ].forEach(([k, v]) => ins.run(k, v));
+
+  // Sincroniza pix_key com env var sempre que o servidor iniciar
+  if (process.env.PIX_KEY) {
+    db.prepare("UPDATE settings SET value = ? WHERE key = 'pix_key'").run(process.env.PIX_KEY);
+  }
 }
 
 function seed() {

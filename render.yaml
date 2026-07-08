@@ -16,9 +16,9 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: PIX_KEY
-        value: +5511947291983
+        value: "11961962855"
       - key: PIX_MERCHANT_NAME
-        value: Point dos Malokas
+        value: Vanice de Souza Santos
       - key: PIX_MERCHANT_CITY
         value: Sao Paulo
       - key: MP_ACCESS_TOKEN
