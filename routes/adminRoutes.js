@@ -67,6 +67,14 @@ router.get('/orders/search', (req, res) => {
   res.json(orders);
 });
 
+// DELETE /api/admin/orders/:id
+router.delete('/orders/:id', (req, res) => {
+  const result = db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Pedido não encontrado.' });
+  db.prepare('DELETE FROM push_subscriptions WHERE order_id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
 // PATCH /api/admin/orders/:id/status
 router.patch('/orders/:id/status', (req, res) => {
   const { status } = req.body;

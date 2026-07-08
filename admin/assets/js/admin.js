@@ -256,10 +256,29 @@ function renderOrders() {
           <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:.4rem;" onclick="printOrder('${order.id}')">
             🖨️ Imprimir
           </button>
+          <button class="btn btn-sm" style="width:100%;margin-top:.4rem;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);" onclick="deleteOrder('${order.id}','${order.order_number}')">
+            🗑️ Apagar
+          </button>
         </div>
       </div>`;
   }).join('');
   refreshIcons();
+}
+
+async function deleteOrder(orderId, orderNumber) {
+  if (!confirm(`Apagar pedido ${orderNumber}? Essa ação não pode ser desfeita.`)) return;
+  try {
+    await apiFetch(`/orders/${orderId}`, { method: 'DELETE' });
+    allOrders = allOrders.filter(o => o.id !== orderId);
+    renderOrders();
+    renderOrderStats(allOrders);
+    updateNewOrdersBadge(allOrders);
+    const panel = document.getElementById('orderDetailPanel');
+    if (panel?.classList.contains('open')) panel.classList.remove('open');
+    showToast(`Pedido ${orderNumber} apagado.`);
+  } catch {
+    showToast('Erro ao apagar pedido.', 'error');
+  }
 }
 
 async function updateOrderStatus(orderId, status, selectEl) {
