@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch {}
 
   fetchOrder();
-  pollInterval = setInterval(fetchOrder, 30000);
+  pollInterval = setInterval(fetchOrder, 10000);
   setupNotifyBanner();
 });
 
@@ -69,8 +69,29 @@ function setupNotifyBanner() {
   const banner = document.getElementById('notifyBanner');
   if (!banner) return;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (Notification.permission === 'granted') return; // já ativado em algum pedido
+  if (Notification.permission === 'denied') return; // usuário bloqueou
+  if (Notification.permission === 'granted') {
+    // Já autorizou — reativa inscrição silenciosamente se necessário
+    resubscribeIfNeeded();
+    return;
+  }
   banner.style.display = 'flex';
+}
+
+async function resubscribeIfNeeded() {
+  try {
+    const { key } = await fetch('/api/push/vapid-public-key').then(r => r.json());
+    if (!key) return;
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      await fetch(`/api/orders/${orderId}/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(existing.toJSON()),
+      });
+    }
+  } catch {}
 }
 
 function urlBase64ToUint8Array(base64String) {

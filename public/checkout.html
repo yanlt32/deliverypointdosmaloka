@@ -110,7 +110,7 @@
               <input type="radio" name="payment" value="pix" checked>
               <div class="payment-icon"><i data-lucide="smartphone"></i></div>
               <div class="payment-name">Pix</div>
-              <div class="payment-desc">Pague via PIX na entrega</div>
+              <div class="payment-desc">Antes ou na entrega</div>
             </label>
             <label class="payment-option" id="optDinheiro" onclick="selectPayment('dinheiro')">
               <input type="radio" name="payment" value="dinheiro">
@@ -130,6 +130,23 @@
               <div class="payment-name">VR Refeição (Alelo)</div>
               <div class="payment-desc">Benefício na entrega</div>
             </label>
+          </div>
+
+          <!-- PIX sub-options: quando/antes pagar — aparece ao selecionar Pix -->
+          <div id="pixPaymentOptions" style="display:none;margin-top:.85rem;background:rgba(245,197,24,.05);border:1px solid rgba(245,197,24,.2);border-radius:10px;padding:1rem;">
+            <div style="font-size:.78rem;color:var(--gray);font-weight:600;margin-bottom:.65rem;">Como você quer pagar?</div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <label class="payment-option selected" id="optPixAntes" onclick="selectPixPayOption('antes')" style="flex:1;min-width:130px;padding:.75rem;">
+                <input type="radio" name="pixPayOption" value="antes" checked>
+                <div class="payment-name" style="font-size:.88rem;">📱 Pagar Agora</div>
+                <div class="payment-desc">Gera o PIX · mostre comprovante</div>
+              </label>
+              <label class="payment-option" id="optPixEntrega" onclick="selectPixPayOption('entrega')" style="flex:1;min-width:130px;padding:.75rem;">
+                <input type="radio" name="pixPayOption" value="entrega">
+                <div class="payment-name" style="font-size:.88rem;">🛵 Pagar na Entrega</div>
+                <div class="payment-desc">Chave PIX disponível no pedido</div>
+              </label>
+            </div>
           </div>
 
           <!-- Pix display — shown after order is placed -->
@@ -152,10 +169,18 @@
               <strong>Como pagar:</strong> Abra o app do seu banco → Pix → Escanear QR Code ou Pix Copia e Cola → Cole o código acima.
             </div>
 
-            <!-- Payment detection indicator -->
-            <div id="pixWaiting" style="display:flex;align-items:center;gap:.6rem;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:var(--gray);">
+            <!-- Payment detection: MP polling -->
+            <div id="pixWaiting" style="display:none;align-items:center;gap:.6rem;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:var(--gray);">
               <div class="spinner" style="width:16px;height:16px;flex-shrink:0;"></div>
-              <span>Aguardando confirmação do pagamento... a página atualiza automaticamente.</span>
+              <span>Aguardando confirmação do pagamento...</span>
+            </div>
+
+            <!-- Já Paguei — static PIX -->
+            <div id="pixClaimCheckout" style="display:none;margin-top:.5rem;">
+              <button onclick="claimPixAndRedirect()" id="pixClaimCheckoutBtn" style="width:100%;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:10px;padding:.85rem;font-size:.9rem;font-weight:700;cursor:pointer;">
+                ✅ Já Paguei — Registrar Pagamento
+              </button>
+              <p style="font-size:.73rem;color:var(--gray);margin-top:.45rem;text-align:center;">Após registrar você será redirecionado para acompanhar o pedido.</p>
             </div>
 
           </div>

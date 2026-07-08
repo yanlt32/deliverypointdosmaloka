@@ -3,6 +3,7 @@ const FORM_KEY = 'pdm_checkout_form';
 const ORDER_PENDING_KEY = 'pdm_pending_order';
 
 let paymentMethod = 'pix';
+let pixPayOption  = 'antes'; // 'antes' | 'entrega'
 let deliveryType = 'retirada'; // entrega temporariamente desativada — em construção
 let orderPlaced = false;
 let changeFor = null;
@@ -10,6 +11,7 @@ let pendingOrderId = null;
 let pixPollInterval = null;
 let deliveryFee = 0;
 let storeOpen = true;
+let _checkoutOrderData = null; // orderId + orderNumber para claimPixAndRedirect
 
 // ── INIT ─────────────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch {}
   selectDeliveryType('retirada');
+  // PIX já está selecionado por padrão — mostrar sub-opções
+  const pixPayOpts = document.getElementById('pixPaymentOptions');
+  if (pixPayOpts) pixPayOpts.style.display = 'block';
 
   const cart = getCart();
   const pending = getPendingOrder();
@@ -298,11 +303,21 @@ function selectPayment(method, persist = true) {
 
   const pixDisplay = document.getElementById('pixDisplay');
   const dinheiroInfo = document.getElementById('dinheiroInfo');
+  const pixPayOpts = document.getElementById('pixPaymentOptions');
   if (pixDisplay) pixDisplay.classList.remove('visible');
   if (dinheiroInfo) dinheiroInfo.style.display = method === 'dinheiro' ? 'block' : 'none';
+  if (pixPayOpts) pixPayOpts.style.display = method === 'pix' ? 'block' : 'none';
 
   if (method !== 'dinheiro') { changeFor = null; }
   if (persist) saveForm();
+}
+
+function selectPixPayOption(option) {
+  pixPayOption = option;
+  const antes    = document.getElementById('optPixAntes');
+  const entrega  = document.getElementById('optPixEntrega');
+  if (antes)   antes.classList.toggle('selected', option === 'antes');
+  if (entrega) entrega.classList.toggle('selected', option === 'entrega');
 }
 
 function selectChangeFor(value) {
@@ -456,22 +471,24 @@ async function placeOrder() {
     clearCart();
     clearForm();
 
-    if (paymentMethod === 'pix' && data.pix && data.pix.paymentId) {
-      // PIX dinâmico (Mercado Pago) — mostra QR e faz polling
-      const orderData = {
-        orderId:     data.orderId,
-        orderNumber: data.orderNumber,
-        total:       data.total,
-        pix:         data.pix,
-        paymentMethod: 'pix',
-      };
-      savePendingOrder(orderData);
+    if (paymentMethod === 'pix' && pixPayOption === 'antes') {
+      // Pagar Antes — mostrar PIX para o cliente pagar agora
       btn.textContent = '✅ Pedido Enviado!';
       btn.disabled = true;
-      showPixDisplay(data);
-      startPixPolling(data.orderId, false);
+      _checkoutOrderData = { orderId: data.orderId, orderNumber: data.orderNumber };
+
+      if (data.pix?.paymentId) {
+        // PIX dinâmico (Mercado Pago) — polling automático
+        const orderData = { orderId: data.orderId, orderNumber: data.orderNumber, total: data.total, pix: data.pix, paymentMethod: 'pix' };
+        savePendingOrder(orderData);
+        showPixDisplay(data, false);
+        startPixPolling(data.orderId, false);
+      } else {
+        // PIX estático — mostra QR + copia e cola + botão "Já Paguei"
+        showPixDisplay(data, true);
+      }
     } else {
-      // Dinheiro, cartão ou PIX na entrega — mostra modal de confirmação
+      // Pagar na Entrega ou outros métodos — modal de confirmação
       btn.textContent = '✅ Pedido Confirmado!';
       showOrderConfirmedModal(data);
     }
@@ -504,7 +521,7 @@ function showOrderConfirmedModal(data) {
 
 // ── PIX DISPLAY (inline, shown in the checkout form after placing order) ──────────
 
-function showPixDisplay(data) {
+function showPixDisplay(data, isStatic = false) {
   const display = document.getElementById('pixDisplay');
   if (!display) return;
   display.classList.add('visible');
@@ -513,17 +530,42 @@ function showPixDisplay(data) {
     document.getElementById('pixQrImg').src = data.pix.qrBase64;
   } else {
     document.querySelector('.pix-qr').innerHTML =
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.5rem;color:var(--gray);font-size:.85rem;text-align:center;">QR Code indisponível.<br>Use a chave abaixo.</div>';
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.5rem;color:var(--gray);font-size:.85rem;text-align:center;">QR Code indisponível.<br>Use o código abaixo.</div>';
   }
 
   const pixPayload = data.pix?.payload || data.pix?.pixKey || '+5511947291983';
   document.getElementById('pixKeyValue').textContent = pixPayload;
+
+  // Para PIX estático: esconde spinner de "aguardando" e mostra "Já Paguei"
+  const pixWaiting = document.getElementById('pixWaiting');
+  const pixClaim   = document.getElementById('pixClaimCheckout');
+  if (isStatic) {
+    if (pixWaiting) pixWaiting.style.display = 'none';
+    if (pixClaim)   pixClaim.style.display = 'block';
+  } else {
+    if (pixWaiting) pixWaiting.style.display = 'flex';
+    if (pixClaim)   pixClaim.style.display = 'none';
+  }
 
   const total = formatBRL(data.total);
   renderSummary([]);
   document.getElementById('summaryTotal').textContent = total;
 
   display.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── JÁ PAGUEI (checkout) ──────────────────────────────────────────────────────────
+
+async function claimPixAndRedirect() {
+  if (!_checkoutOrderData) return;
+  const btn = document.getElementById('pixClaimCheckoutBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
+
+  try {
+    await fetch(`/api/orders/${_checkoutOrderData.orderNumber}/pix-claimed`, { method: 'POST' });
+  } catch {}
+
+  window.location.href = `/pedido?id=${_checkoutOrderData.orderId}`;
 }
 
 // ── PIX PAYMENT POLLING ────────────────────────────────────────────────────────────
