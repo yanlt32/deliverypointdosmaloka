@@ -1,10 +1,18 @@
 // Order tracking page
 const STATUS_STEPS = [
-  { key: 'novo',        label: 'Pedido Recebido',  icon: 'clipboard-list' },
-  { key: 'confirmado',  label: 'Confirmado',        icon: 'check-circle' },
-  { key: 'preparando',  label: 'Preparando',        icon: 'flame' },
-  { key: 'saiu',        label: 'Saiu para Entrega', icon: 'bike' },
-  { key: 'entregue',    label: 'Entregue',          icon: 'package-check' },
+  { key: 'novo',        label: 'Pedido Recebido',    icon: 'clipboard-list' },
+  { key: 'confirmado',  label: 'Confirmado',          icon: 'check-circle' },
+  { key: 'preparando',  label: 'Preparando',          icon: 'flame' },
+  { key: 'saiu',        label: 'Saiu para Entrega',   icon: 'bike' },
+  { key: 'entregue',    label: 'Entregue',             icon: 'package-check' },
+];
+
+const RETIRADA_STEPS = [
+  { key: 'novo',        label: 'Pedido Recebido',     icon: 'clipboard-list' },
+  { key: 'confirmado',  label: 'Confirmado',           icon: 'check-circle' },
+  { key: 'preparando',  label: 'Preparando',           icon: 'flame' },
+  { key: 'saiu',        label: 'Pronto para Retirar',  icon: 'store' },
+  { key: 'entregue',    label: 'Retirado ✓',           icon: 'package-check' },
 ];
 
 const STATUS_LABELS = {
@@ -13,6 +21,15 @@ const STATUS_LABELS = {
   preparando: 'Preparando',
   saiu:       'Saiu para entrega',
   entregue:   'Entregue!',
+  cancelado:  'Cancelado',
+};
+
+const RETIRADA_LABELS = {
+  novo:       'Novo pedido',
+  confirmado: 'Confirmado',
+  preparando: 'Preparando',
+  saiu:       'Pronto para Retirar',
+  entregue:   'Retirado!',
   cancelado:  'Cancelado',
 };
 
@@ -124,19 +141,26 @@ function renderOrder(order) {
   document.getElementById('orderNumber').textContent = order.order_number;
 
   const statusKey = order.order_status;
+  const isRetirada = order.delivery_type === 'retirada';
+  const labels = isRetirada ? RETIRADA_LABELS : STATUS_LABELS;
   const badge = document.getElementById('orderStatusBadge');
-  badge.textContent = `● ${STATUS_LABELS[statusKey] || statusKey}`;
+  badge.textContent = `● ${labels[statusKey] || statusKey}`;
   badge.className = `order-status-badge ${STATUS_CLASSES[statusKey] || 'status-novo'}`;
 
   document.getElementById('orderCreatedAt').textContent =
     `Pedido realizado em ${formatDate(order.created_at)}`;
 
   // Timeline
-  renderTimeline(statusKey);
+  renderTimeline(statusKey, isRetirada);
 
   // Customer info
-  const addr = [order.street, order.number, order.complement, order.neighborhood]
-    .filter(Boolean).join(', ');
+  const titleEl = document.getElementById('customerInfoTitle');
+  if (titleEl) titleEl.textContent = isRetirada ? 'Dados do Pedido' : 'Dados de Entrega';
+
+  const addrLabel = isRetirada ? 'Tipo de Pedido' : 'Endereço de Entrega';
+  const addrValue = isRetirada
+    ? '🏪 Retirada no local'
+    : [order.street, order.number, order.complement, order.neighborhood].filter(Boolean).join(', ');
 
   document.getElementById('customerInfo').innerHTML = `
     <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:1rem;">
@@ -148,9 +172,9 @@ function renderOrder(order) {
       <div style="font-weight:600;color:var(--white);">${order.customer_phone}</div>
     </div>
     <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:1rem;grid-column:1/-1;">
-      <div style="font-size:.75rem;color:var(--gray);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem;">Endereço de Entrega</div>
-      <div style="font-weight:600;color:var(--white);">${addr}</div>
-      ${order.reference ? `<div style="font-size:.8rem;color:var(--gray);margin-top:.25rem;">Ref: ${order.reference}</div>` : ''}
+      <div style="font-size:.75rem;color:var(--gray);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem;">${addrLabel}</div>
+      <div style="font-weight:600;color:var(--white);">${addrValue}</div>
+      ${!isRetirada && order.reference ? `<div style="font-size:.8rem;color:var(--gray);margin-top:.25rem;">Ref: ${order.reference}</div>` : ''}
     </div>
     ${order.notes ? `
     <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:1rem;grid-column:1/-1;">
@@ -175,12 +199,33 @@ function renderOrder(order) {
   const msg = encodeURIComponent(`Olá! Quero saber o status do meu pedido ${order.order_number}. 😊`);
   document.getElementById('whatsappOrderBtn').href = `https://wa.me/5511947291983?text=${msg}`;
 
-  // PIX na entrega info
+  // PIX payment section
   orderNumber = order.order_number;
   const pixInfo = document.getElementById('pixDeliveryInfo');
-  if (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey) && pixKey) {
-    document.getElementById('pixDeliveryKey').textContent = pixKey;
+  if (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey)) {
+    document.getElementById('pixDeliveryKey').textContent = pixKey || '+5511947291983';
     document.getElementById('pixDeliveryAmount').textContent = `Valor: R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`;
+
+    // Copia e cola payload
+    const payloadSection = document.getElementById('pixPayloadSection');
+    if (order.pix_payload && payloadSection) {
+      document.getElementById('pixPayloadValue').textContent = order.pix_payload;
+      payloadSection.style.display = 'block';
+    } else if (payloadSection) {
+      payloadSection.style.display = 'none';
+    }
+
+    // Toggle: pendente vs já pago
+    const pendingSection = document.getElementById('pixPendingSection');
+    const claimedSection = document.getElementById('pixClaimedSection');
+    if (order.pix_claimed) {
+      if (pendingSection) pendingSection.style.display = 'none';
+      if (claimedSection) claimedSection.style.display = 'block';
+    } else {
+      if (pendingSection) pendingSection.style.display = 'block';
+      if (claimedSection) claimedSection.style.display = 'none';
+    }
+
     if (pixInfo) pixInfo.style.display = 'block';
   } else {
     if (pixInfo) pixInfo.style.display = 'none';
@@ -252,11 +297,37 @@ function copyPixDeliveryKey() {
   });
 }
 
-function renderTimeline(currentStatus) {
-  const currentIndex = STATUS_STEPS.findIndex(s => s.key === currentStatus);
+function copyPixPayload() {
+  const payload = document.getElementById('pixPayloadValue').textContent;
+  const btn = document.getElementById('copyPixPayloadBtn');
+  navigator.clipboard.writeText(payload).then(() => {
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+  });
+}
+
+async function claimPixPaid() {
+  if (!orderNumber) return;
+  const btn = document.getElementById('pixClaimBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
+  try {
+    const res = await fetch(`/api/orders/${orderNumber}/pix-claimed`, { method: 'POST' });
+    if (!res.ok) throw new Error();
+    const pendingSection = document.getElementById('pixPendingSection');
+    const claimedSection = document.getElementById('pixClaimedSection');
+    if (pendingSection) pendingSection.style.display = 'none';
+    if (claimedSection) claimedSection.style.display = 'block';
+  } catch {
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Já Paguei — Registrar Pagamento'; }
+  }
+}
+
+function renderTimeline(currentStatus, isRetirada) {
+  const steps = isRetirada ? RETIRADA_STEPS : STATUS_STEPS;
+  const currentIndex = steps.findIndex(s => s.key === currentStatus);
   const isCancelled = currentStatus === 'cancelado';
 
-  const html = STATUS_STEPS.map((step, i) => {
+  const html = steps.map((step, i) => {
     let cls = '';
     if (isCancelled && step.key === 'novo') cls = 'done';
     else if (!isCancelled && i < currentIndex) cls = 'done';

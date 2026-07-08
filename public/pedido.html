@@ -49,7 +49,7 @@
 
       <!-- Customer info -->
       <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
-        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--white);margin-bottom:1rem;">Dados de Entrega</h4>
+        <h4 id="customerInfoTitle" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--white);margin-bottom:1rem;">Dados de Entrega</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;" id="customerInfo"></div>
       </div>
 
@@ -69,15 +69,41 @@
         <button onclick="ativarNotificacoes()" id="notifyBtn" class="btn btn-gold btn-sm" style="white-space:nowrap;">Ativar Notificações</button>
       </div>
 
-      <!-- PIX na entrega info -->
+      <!-- PIX payment info -->
       <div id="pixDeliveryInfo" style="display:none;margin:0 1.5rem 0;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.25);border-radius:12px;padding:1.25rem;">
-        <div style="font-weight:700;color:var(--gold);margin-bottom:.5rem;">📱 Pagamento via PIX</div>
-        <p style="font-size:.85rem;color:var(--gray);margin-bottom:.75rem;">Pague quando o entregador chegar usando a chave abaixo:</p>
-        <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
-          <span id="pixDeliveryKey" style="font-family:monospace;font-size:.85rem;color:var(--white);word-break:break-all;flex:1;"></span>
-          <button onclick="copyPixDeliveryKey()" style="background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:.35rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;flex-shrink:0;" id="copyPixDeliveryBtn">Copiar</button>
+        <div style="font-weight:700;color:var(--gold);margin-bottom:.75rem;">📱 Pagamento via PIX</div>
+
+        <!-- Seção: aguardando pagamento -->
+        <div id="pixPendingSection">
+          <!-- PIX Copia e Cola (só aparece se tiver payload) -->
+          <div id="pixPayloadSection" style="display:none;margin-bottom:.85rem;">
+            <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem;">PIX Copia e Cola</div>
+            <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+              <span id="pixPayloadValue" style="font-family:monospace;font-size:.68rem;color:var(--white);word-break:break-all;flex:1;line-height:1.5;"></span>
+              <button onclick="copyPixPayload()" style="background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:.35rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;flex-shrink:0;" id="copyPixPayloadBtn">Copiar</button>
+            </div>
+          </div>
+
+          <!-- Chave PIX simples -->
+          <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem;">Ou use a chave PIX:</div>
+          <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem;">
+            <span id="pixDeliveryKey" style="font-family:monospace;font-size:.85rem;color:var(--white);word-break:break-all;flex:1;"></span>
+            <button onclick="copyPixDeliveryKey()" style="background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:.35rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;flex-shrink:0;" id="copyPixDeliveryBtn">Copiar</button>
+          </div>
+          <div id="pixDeliveryAmount" style="font-size:.82rem;color:var(--gray);margin-bottom:1rem;"></div>
+
+          <!-- Botão Já Paguei -->
+          <button id="pixClaimBtn" onclick="claimPixPaid()" style="width:100%;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:10px;padding:.85rem;font-size:.9rem;font-weight:700;cursor:pointer;">
+            ✅ Já Paguei — Registrar Pagamento
+          </button>
         </div>
-        <div id="pixDeliveryAmount" style="margin-top:.6rem;font-size:.82rem;color:var(--gray);"></div>
+
+        <!-- Seção: já pagou -->
+        <div id="pixClaimedSection" style="display:none;text-align:center;padding:.5rem 0;">
+          <div style="font-size:2.5rem;margin-bottom:.6rem;">🎉</div>
+          <div style="font-weight:700;color:#22c55e;font-size:1rem;margin-bottom:.4rem;">Pagamento Registrado!</div>
+          <div style="font-size:.84rem;color:var(--gray);line-height:1.7;">Mostre o comprovante do PIX na entrega.<br>Seu pedido está sendo preparado! 🙌</div>
+        </div>
       </div>
 
       <!-- Actions -->

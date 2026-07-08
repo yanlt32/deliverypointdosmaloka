@@ -222,7 +222,7 @@ function renderOrders() {
           <div class="order-num">${order.order_number}</div>
           <div class="order-time">${formatTime(order.created_at)}</div>
           <div class="time-ago-tag ${agoClass}">${ico('clock', 10)} ${ago}</div>
-          <div style="margin-top:.3rem;">${statusBadge(order.order_status)}</div>
+          <div style="margin-top:.3rem;">${statusBadge(order.order_status, order.delivery_type)}</div>
         </div>
         <div>
           <div class="order-customer-name">${ico('user',13)} ${order.customer_name}</div>
@@ -234,7 +234,7 @@ function renderOrders() {
           <div class="order-total">${formatBRL(order.total)}</div>
           <div class="order-payment">
             ${order.payment_method === 'pix'
-              ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : order.pix_dynamic ? '<span class="pix-pending-badge">⏳ Aguardando PIX</span>' : '<span class="pix-pending-badge">💵 PIX na Entrega</span>'}`
+              ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : order.pix_claimed ? '<span class="pix-paid-badge">💰 Pago Antes</span>' : order.pix_dynamic ? '<span class="pix-pending-badge">⏳ Aguardando PIX</span>' : '<span class="pix-pending-badge">💵 PIX na Entrega</span>'}`
               : order.payment_method === 'cartao'
                 ? `${ico('credit-card',12)} Cartão na Entrega`
                 : order.payment_method === 'alelo'
@@ -249,8 +249,8 @@ function renderOrders() {
             <option value="novo"       ${order.order_status === 'novo'       ? 'selected' : ''}>Novo</option>
             <option value="confirmado" ${order.order_status === 'confirmado' ? 'selected' : ''}>Confirmado</option>
             <option value="preparando" ${order.order_status === 'preparando' ? 'selected' : ''}>Preparando</option>
-            <option value="saiu"       ${order.order_status === 'saiu'       ? 'selected' : ''}>Saiu para entrega</option>
-            <option value="entregue"   ${order.order_status === 'entregue'   ? 'selected' : ''}>Entregue</option>
+            <option value="saiu"       ${order.order_status === 'saiu'       ? 'selected' : ''}>${order.delivery_type === 'retirada' ? 'Pronto p/ Retirar' : 'Saiu para entrega'}</option>
+            <option value="entregue"   ${order.order_status === 'entregue'   ? 'selected' : ''}>${order.delivery_type === 'retirada' ? 'Retirado' : 'Entregue'}</option>
             <option value="cancelado"  ${order.order_status === 'cancelado'  ? 'selected' : ''}>Cancelado</option>
           </select>
           <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:.4rem;" onclick="printOrder('${order.id}')">
@@ -325,7 +325,8 @@ function printOrder(orderId) {
   const ref  = order.reference ? `<div class="p-ref">Ref: ${order.reference}</div>` : '';
   const notes = order.notes ? `<div class="p-block p-obs"><strong>⚠️ Observações:</strong> ${order.notes}</div>` : '';
 
-  const statusMap = { novo:'Novo', confirmado:'Confirmado', preparando:'Preparando', saiu:'Saiu para entrega', entregue:'Entregue', cancelado:'Cancelado' };
+  const isRetiradaOrder = order.delivery_type === 'retirada';
+  const statusMap = { novo:'Novo', confirmado:'Confirmado', preparando:'Preparando', saiu: isRetiradaOrder ? 'Pronto p/ Retirar' : 'Saiu para entrega', entregue: isRetiradaOrder ? 'Retirado' : 'Entregue', cancelado:'Cancelado' };
   const payMap    = { pix:'PIX', dinheiro:'Dinheiro na Entrega', cartao:'Cartão na Entrega', alelo:'VR Refeição (Alelo)', vr:'VR Refeição (Alelo)' };
 
   const items = (order.items || []).map(item => {
@@ -406,13 +407,15 @@ function printOrder(orderId) {
 
   <hr class="p-divider">
   <div class="p-pay">💳 ${payMap[order.payment_method] || order.payment_method}</div>
-  ${order.payment_method === 'pix' && order.payment_status !== 'pago'
-    ? (order.pix_dynamic
-        ? '<div class="p-pix-pending">⏳ Aguardando confirmação do PIX</div>'
-        : '<div class="p-pix-pending">💵 Pague via PIX na entrega</div>')
-    : ''}
   ${order.payment_method === 'pix' && order.payment_status === 'pago'
-    ? '<div class="p-pix-pending" style="color:green;">✅ PIX Confirmado</div>' : ''}
+    ? '<div class="p-pix-pending" style="color:green;">✅ PIX Confirmado</div>'
+    : order.payment_method === 'pix' && order.pix_claimed
+      ? '<div class="p-pix-pending" style="color:green;">💰 Pago Antes — Verificar Comprovante</div>'
+      : order.payment_method === 'pix' && order.pix_dynamic
+        ? '<div class="p-pix-pending">⏳ Aguardando confirmação do PIX</div>'
+        : order.payment_method === 'pix'
+          ? '<div class="p-pix-pending">💵 Pague via PIX na entrega</div>'
+          : ''}
   ${order.change_for > 0 ? `
   <table style="margin-top:6px;">
     <tr><td style="font-size:12px;color:#555;">Cliente paga com</td><td class="p-right">R$ ${parseFloat(order.change_for).toFixed(2).replace('.',',')}</td></tr>
@@ -485,7 +488,7 @@ function renderOrderDetail(order) {
       <div>
         <div style="font-size:.72rem;color:var(--gray);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;">Pedido</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--gold);">${order.order_number}</div>
-        ${statusBadge(order.order_status)}
+        ${statusBadge(order.order_status, order.delivery_type)}
         <div style="font-size:.75rem;color:var(--gray);margin-top:.5rem;">${formatDateFull(order.created_at)}</div>
       </div>
 
@@ -532,7 +535,7 @@ function renderOrderDetail(order) {
         </div>
         <div style="font-size:.75rem;color:var(--gray);margin-top:.3rem;text-align:right;">
           ${order.payment_method === 'pix'
-            ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : '<span class="pix-pending-badge">⏳ Aguardando PIX</span>'}`
+            ? `${ico('smartphone',12)} Pix ${order.payment_status === 'pago' ? '<span class="pix-paid-badge">● Pago</span>' : order.pix_claimed ? '<span class="pix-paid-badge">💰 Pago Antes</span>' : '<span class="pix-pending-badge">💵 PIX na Entrega</span>'}`
             : order.payment_method === 'cartao'
               ? `${ico('credit-card',12)} Cartão na Entrega`
               : order.payment_method === 'alelo'
@@ -546,12 +549,12 @@ function renderOrderDetail(order) {
       <div>
         <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem;">Atualizar Status</div>
         <select class="form-control" style="margin-bottom:.75rem;" onchange="updateOrderStatus('${order.id}', this.value, this)">
-          <option value="novo" ${order.order_status === 'novo' ? 'selected' : ''}>Novo</option>
+          <option value="novo"       ${order.order_status === 'novo'       ? 'selected' : ''}>Novo</option>
           <option value="confirmado" ${order.order_status === 'confirmado' ? 'selected' : ''}>Confirmado</option>
           <option value="preparando" ${order.order_status === 'preparando' ? 'selected' : ''}>Preparando</option>
-          <option value="saiu" ${order.order_status === 'saiu' ? 'selected' : ''}>Saiu para Entrega</option>
-          <option value="entregue" ${order.order_status === 'entregue' ? 'selected' : ''}>Entregue</option>
-          <option value="cancelado" ${order.order_status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+          <option value="saiu"       ${order.order_status === 'saiu'       ? 'selected' : ''}>${order.delivery_type === 'retirada' ? 'Pronto para Retirar' : 'Saiu para Entrega'}</option>
+          <option value="entregue"   ${order.order_status === 'entregue'   ? 'selected' : ''}>${order.delivery_type === 'retirada' ? 'Retirado' : 'Entregue'}</option>
+          <option value="cancelado"  ${order.order_status === 'cancelado'  ? 'selected' : ''}>Cancelado</option>
         </select>
       </div>
     </div>`;
@@ -1085,7 +1088,7 @@ function renderClientSearchResults(orders) {
           <div style="font-weight:600;color:var(--white);font-size:.88rem;">${order.customer_name}</div>
           <div style="font-size:.75rem;color:var(--gray);">${order.customer_phone}</div>
         </div>
-        <div>${statusBadge(order.order_status)}</div>
+        <div>${statusBadge(order.order_status, order.delivery_type)}</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--gold);text-align:right;">${formatBRL(order.total)}</div>
       </div>`).join('');
   refreshIcons();
@@ -1155,7 +1158,7 @@ function formatDateShort(dateStr) {
   return `${d}/${m}/${y}`;
 }
 
-function statusBadge(status) {
+function statusBadge(status, deliveryType) {
   const map = {
     novo:       ['badge-novo',       'sparkles',      'Novo'],
     confirmado: ['badge-confirmado', 'check-circle',  'Confirmado'],
@@ -1165,7 +1168,10 @@ function statusBadge(status) {
     cancelado:  ['badge-cancelado',  'x-circle',      'Cancelado'],
   };
   const [cls, iconName, label] = map[status] || ['badge-novo', 'circle', status];
-  return `<span class="badge ${cls}">${ico(iconName, 11)} ${label}</span>`;
+  const displayLabel = (status === 'saiu' && deliveryType === 'retirada') ? 'Pronto p/ Retirar' :
+                       (status === 'entregue' && deliveryType === 'retirada') ? 'Retirado' : label;
+  const displayIcon  = (status === 'saiu' && deliveryType === 'retirada') ? 'store' : iconName;
+  return `<span class="badge ${cls}">${ico(displayIcon, 11)} ${displayLabel}</span>`;
 }
 
 function showToast(msg, type = 'success') {

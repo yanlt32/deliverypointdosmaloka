@@ -102,13 +102,24 @@ router.post('/orders', async (req, res) => {
   `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee, dtype);
 
   let pixData = null;
-  if (payment_method === 'pix' && process.env.MP_ACCESS_TOKEN) {
-    try {
-      pixData = await generatePixQRDynamic(total, orderNumber);
-      db.prepare('UPDATE orders SET pix_dynamic = 1 WHERE id = ?').run(id);
-    } catch (e) {
-      console.error('Erro ao gerar PIX dinâmico:', e.message);
-      try { pixData = await generatePixQR(total, orderNumber); } catch {}
+  if (payment_method === 'pix') {
+    if (process.env.MP_ACCESS_TOKEN) {
+      try {
+        pixData = await generatePixQRDynamic(total, orderNumber);
+        db.prepare('UPDATE orders SET pix_dynamic = 1 WHERE id = ?').run(id);
+      } catch (e) {
+        console.error('Erro ao gerar PIX dinâmico:', e.message);
+      }
+    }
+    if (!pixData) {
+      try {
+        pixData = await generatePixQR(total, orderNumber);
+      } catch (e) {
+        console.error('Erro ao gerar PIX estático:', e.message);
+      }
+    }
+    if (pixData?.payload) {
+      db.prepare('UPDATE orders SET pix_payload = ? WHERE id = ?').run(pixData.payload, id);
     }
   }
 
@@ -139,6 +150,14 @@ router.post('/orders/:id/subscribe', (req, res) => {
     ON CONFLICT(endpoint) DO UPDATE SET order_id = excluded.order_id
   `).run(req.params.id, endpoint, JSON.stringify(keys));
 
+  res.json({ success: true });
+});
+
+// POST /api/orders/:orderNumber/pix-claimed
+router.post('/orders/:orderNumber/pix-claimed', (req, res) => {
+  const order = db.prepare('SELECT id FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+  if (!order) return res.status(404).json({ error: 'Pedido não encontrado.' });
+  db.prepare("UPDATE orders SET pix_claimed = 1, updated_at = datetime('now','localtime') WHERE order_number = ?").run(req.params.orderNumber);
   res.json({ success: true });
 });
 

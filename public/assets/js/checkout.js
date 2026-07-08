@@ -456,8 +456,8 @@ async function placeOrder() {
     clearCart();
     clearForm();
 
-    if (paymentMethod === 'pix' && data.pix) {
-      // Tem QR code (Mercado Pago configurado) — mostra QR e faz polling
+    if (paymentMethod === 'pix' && data.pix && data.pix.paymentId) {
+      // PIX dinâmico (Mercado Pago) — mostra QR e faz polling
       const orderData = {
         orderId:     data.orderId,
         orderNumber: data.orderNumber,

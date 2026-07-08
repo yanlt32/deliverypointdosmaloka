@@ -133,6 +133,8 @@ function init() {
   try { db.exec("ALTER TABLE orders ADD COLUMN delivery_fee REAL DEFAULT 0"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN delivery_type TEXT DEFAULT 'entrega'"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN pix_dynamic INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN pix_claimed INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN pix_payload TEXT"); } catch {}
   db.exec(`UPDATE product_options SET max_select = 1 WHERE option_group IN ('Sabor','Sabores','Recheio 1','Recheio 2') AND max_select IS NULL`);
   db.exec(`UPDATE product_options SET max_select = 3 WHERE option_group = 'Recheios (até 3)' AND max_select IS NULL`);
 
