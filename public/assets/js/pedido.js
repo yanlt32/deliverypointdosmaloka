@@ -220,10 +220,10 @@ function renderOrder(order) {
   const msg = encodeURIComponent(`Olá! Quero saber o status do meu pedido ${order.order_number}. 😊`);
   document.getElementById('whatsappOrderBtn').href = `https://wa.me/5511947291983?text=${msg}`;
 
-  // PIX payment section
+  // PIX payment section — só mostra se PIX, não entregue/cancelado e ainda não pagou
   orderNumber = order.order_number;
   const pixInfo = document.getElementById('pixDeliveryInfo');
-  if (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey)) {
+  if (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey) && !order.pix_claimed) {
     document.getElementById('pixDeliveryKey').textContent = pixKey || '+5511947291983';
     document.getElementById('pixDeliveryAmount').textContent = `Valor: R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`;
 
@@ -234,17 +234,6 @@ function renderOrder(order) {
       payloadSection.style.display = 'block';
     } else if (payloadSection) {
       payloadSection.style.display = 'none';
-    }
-
-    // Toggle: pendente vs já pago
-    const pendingSection = document.getElementById('pixPendingSection');
-    const claimedSection = document.getElementById('pixClaimedSection');
-    if (order.pix_claimed) {
-      if (pendingSection) pendingSection.style.display = 'none';
-      if (claimedSection) claimedSection.style.display = 'block';
-    } else {
-      if (pendingSection) pendingSection.style.display = 'block';
-      if (claimedSection) claimedSection.style.display = 'none';
     }
 
     if (pixInfo) pixInfo.style.display = 'block';
@@ -334,10 +323,9 @@ async function claimPixPaid() {
   try {
     const res = await fetch(`/api/orders/${orderNumber}/pix-claimed`, { method: 'POST' });
     if (!res.ok) throw new Error();
-    const pendingSection = document.getElementById('pixPendingSection');
-    const claimedSection = document.getElementById('pixClaimedSection');
-    if (pendingSection) pendingSection.style.display = 'none';
-    if (claimedSection) claimedSection.style.display = 'block';
+    // Some a seção PIX inteira — não precisa ver mais
+    const pixInfo = document.getElementById('pixDeliveryInfo');
+    if (pixInfo) pixInfo.style.display = 'none';
   } catch {
     if (btn) { btn.disabled = false; btn.textContent = '✅ Já Paguei — Registrar Pagamento'; }
   }
