@@ -64,31 +64,13 @@
         </div>
       </div>
 
-      <!-- PIX payment info — some quando pix_claimed=1 -->
+      <!-- PIX payment info -->
       <div id="pixDeliveryInfo" style="display:none;margin:0 1.5rem 0;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.25);border-radius:12px;padding:1.25rem;">
-        <div style="font-weight:700;color:var(--gold);margin-bottom:.75rem;">📱 Pagamento via PIX</div>
-
-        <!-- PIX Copia e Cola (só aparece se tiver payload) -->
-        <div id="pixPayloadSection" style="display:none;margin-bottom:.85rem;">
-          <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem;">PIX Copia e Cola</div>
-          <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
-            <span id="pixPayloadValue" style="font-family:monospace;font-size:.68rem;color:var(--white);word-break:break-all;flex:1;line-height:1.5;"></span>
-            <button onclick="copyPixPayload()" style="background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:.35rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;flex-shrink:0;" id="copyPixPayloadBtn">Copiar</button>
-          </div>
-        </div>
-
-        <!-- Chave PIX simples -->
-        <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem;">Ou use a chave PIX:</div>
-        <div style="background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem;">
-          <span id="pixDeliveryKey" style="font-family:monospace;font-size:.85rem;color:var(--white);word-break:break-all;flex:1;"></span>
-          <button onclick="copyPixDeliveryKey()" style="background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:.35rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;flex-shrink:0;" id="copyPixDeliveryBtn">Copiar</button>
-        </div>
-        <div id="pixDeliveryAmount" style="font-size:.82rem;color:var(--gray);margin-bottom:1rem;"></div>
-
-        <!-- Botão Já Paguei -->
-        <button id="pixClaimBtn" onclick="claimPixPaid()" style="width:100%;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:10px;padding:.85rem;font-size:.9rem;font-weight:700;cursor:pointer;">
-          ✅ Já Paguei — Registrar Pagamento
-        </button>
+        <div style="font-weight:700;color:var(--gold);margin-bottom:.5rem;">📱 Pagamento via PIX</div>
+        <p style="font-size:.85rem;color:var(--gray);line-height:1.6;margin:0;">
+          Pague o PIX na hora da retirada/entrega.<br>
+          Chave PIX: <strong style="color:var(--white);font-family:monospace;">(11) 96196-2855</strong>
+        </p>
       </div>
 
       <!-- Actions -->
@@ -105,9 +87,6 @@
       </div>
     </div>
 
-    <p style="text-align:center;font-size:.78rem;color:var(--gray);margin-top:.5rem;">
-      Esta página atualiza automaticamente a cada 10 segundos
-    </p>
 
   </div>
 </div>

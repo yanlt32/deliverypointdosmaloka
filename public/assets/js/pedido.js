@@ -220,25 +220,11 @@ function renderOrder(order) {
   const msg = encodeURIComponent(`Olá! Quero saber o status do meu pedido ${order.order_number}. 😊`);
   document.getElementById('whatsappOrderBtn').href = `https://wa.me/5511947291983?text=${msg}`;
 
-  // PIX payment section — só mostra se PIX, não entregue/cancelado e ainda não pagou
+  // PIX payment section — mostra instrução simples se PIX e não finalizado
   orderNumber = order.order_number;
   const pixInfo = document.getElementById('pixDeliveryInfo');
-  if (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey) && !order.pix_claimed) {
-    document.getElementById('pixDeliveryKey').textContent = pixKey || '+5511947291983';
-    document.getElementById('pixDeliveryAmount').textContent = `Valor: R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`;
-
-    // Copia e cola payload
-    const payloadSection = document.getElementById('pixPayloadSection');
-    if (order.pix_payload && payloadSection) {
-      document.getElementById('pixPayloadValue').textContent = order.pix_payload;
-      payloadSection.style.display = 'block';
-    } else if (payloadSection) {
-      payloadSection.style.display = 'none';
-    }
-
-    if (pixInfo) pixInfo.style.display = 'block';
-  } else {
-    if (pixInfo) pixInfo.style.display = 'none';
+  if (pixInfo) {
+    pixInfo.style.display = (order.payment_method === 'pix' && !['entregue', 'cancelado'].includes(statusKey)) ? 'block' : 'none';
   }
 
   // Botão cancelar — só mostra se status for novo ou confirmado
@@ -298,38 +284,6 @@ async function confirmCancelOrder() {
   }
 }
 
-function copyPixDeliveryKey() {
-  const key = document.getElementById('pixDeliveryKey').textContent;
-  const btn = document.getElementById('copyPixDeliveryBtn');
-  navigator.clipboard.writeText(key).then(() => {
-    btn.textContent = 'Copiado!';
-    setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
-  });
-}
-
-function copyPixPayload() {
-  const payload = document.getElementById('pixPayloadValue').textContent;
-  const btn = document.getElementById('copyPixPayloadBtn');
-  navigator.clipboard.writeText(payload).then(() => {
-    btn.textContent = 'Copiado!';
-    setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
-  });
-}
-
-async function claimPixPaid() {
-  if (!orderNumber) return;
-  const btn = document.getElementById('pixClaimBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
-  try {
-    const res = await fetch(`/api/orders/${orderNumber}/pix-claimed`, { method: 'POST' });
-    if (!res.ok) throw new Error();
-    // Some a seção PIX inteira — não precisa ver mais
-    const pixInfo = document.getElementById('pixDeliveryInfo');
-    if (pixInfo) pixInfo.style.display = 'none';
-  } catch {
-    if (btn) { btn.disabled = false; btn.textContent = '✅ Já Paguei — Registrar Pagamento'; }
-  }
-}
 
 function renderTimeline(currentStatus, isRetirada) {
   const steps = isRetirada ? RETIRADA_STEPS : STATUS_STEPS;
