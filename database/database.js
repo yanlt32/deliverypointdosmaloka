@@ -141,6 +141,7 @@ function init() {
 
   migrateMenuPrices();
   migrateAcaiPerSize();
+  migrateCaipirinhaSabores();
 
   seedSettings();
   seed();
@@ -401,6 +402,51 @@ function migrateMenuPrices() {
     updProd.run(26.00, 'Egg Bacon do Chef',            bid);
     updProd.run(30.00, 'O Magnífico do Chef',          bid);
   }
+}
+
+function migrateCaipirinhaSabores() {
+  if (db.prepare("SELECT 1 FROM settings WHERE key = 'migration_caip_sabores_v1'").get()) return;
+
+  const caipCat = db.prepare("SELECT id FROM categories WHERE slug = 'caipirinhas'").get();
+  if (!caipCat) return;
+
+  const getProd = db.prepare('SELECT id FROM products WHERE name = ? AND category_id = ?');
+  const delOpts = db.prepare('DELETE FROM product_options WHERE product_id = ? AND option_group IN (?, ?)');
+  const iOpt    = db.prepare('INSERT INTO product_options (product_id, category_id, option_group, name, price, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+
+  const setOpts = (prodName, group, flavors) => {
+    const prod = getProd.get(prodName, caipCat.id);
+    if (!prod) return;
+    delOpts.run(prod.id, group, 'Sabores');
+    flavors.forEach((name, i) => iOpt.run(prod.id, null, group, name, 0, i));
+    // garante max_select = 1
+    db.prepare('UPDATE product_options SET max_select = 1 WHERE product_id = ? AND option_group = ?').run(prod.id, group);
+  };
+
+  setOpts('Caipirinha Tradicional', 'Sabor', [
+    'Abacaxi','Abacaxi c/ Hortelã','Morango','Morango c/ Hortelã','Maracujá',
+    'Kiwi','Kiwi c/ Hortelã','Limão','Limão c/ Hortelã','Melancia','Melancia c/ Hortelã','Manga',
+  ]);
+
+  setOpts('Caipirinha Gourmet', 'Sabor', [
+    'Abacaxi','Abacaxi c/ Hortelã','Abacaxi ao Vinho','Morango','Morango c/ Hortelã','Morango ao Vinho',
+    'Maracujá','Kiwi','Kiwi c/ Hortelã','Limão','Limão c/ Hortelã','Melancia','Melancia c/ Hortelã','Manga',
+  ]);
+
+  setOpts('Caipirinha Premium', 'Sabor', [
+    'Céu Azul','Paçoca','Ovomaltine','Açaí c/ Morango','Açaí c/ Maracujá',
+    'Ninho c/ Morango','Cupuaçu c/ Morango','Ovomaltine c/ Maracujá','Frutas Vermelhas',
+  ]);
+
+  const combo2 = [
+    'Morango c/ Limão','Abacaxi c/ Limão','Maracujá c/ Limão','Melancia c/ Limão',
+    'Kiwi c/ Limão','Kiwi c/ Morango','Maracujá c/ Morango','Abacaxi c/ Morango',
+  ];
+  setOpts('Caipirinha 2 Sabores Tradicional', 'Sabor', combo2);
+  setOpts('Caipirinha 2 Sabores Gourmet',     'Sabor', combo2);
+
+  db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('migration_caip_sabores_v1', '1')").run();
+  console.log('✅ Sabores de caipirinhas atualizados.');
 }
 
 function migrateAcaiPerSize() {
