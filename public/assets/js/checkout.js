@@ -12,6 +12,7 @@ let pixPollInterval = null;
 let deliveryFee = 0;
 let storeOpen = true;
 let _checkoutOrderData = null; // orderId + orderNumber para claimPixAndRedirect
+let _savedCart = [];           // carrinho salvo para restaurar ao trocar pagamento
 
 // ── INIT ─────────────────────────────────────────────────────────────────────────
 
@@ -294,6 +295,7 @@ function selectDeliveryType(type) {
 }
 
 function selectPayment(method, persist = true) {
+  if (orderPlaced) return;
   paymentMethod = method;
   const idMap = { pix:'optPix', dinheiro:'optDinheiro', cartao:'optCartao', alelo:'optAlelo', vr:'optVR' };
   Object.entries(idMap).forEach(([m, id]) => {
@@ -313,11 +315,18 @@ function selectPayment(method, persist = true) {
 }
 
 function selectPixPayOption(option) {
+  if (orderPlaced) return; // bloqueia após pedido feito
   pixPayOption = option;
-  const antes    = document.getElementById('optPixAntes');
-  const entrega  = document.getElementById('optPixEntrega');
+  const antes   = document.getElementById('optPixAntes');
+  const entrega = document.getElementById('optPixEntrega');
   if (antes)   antes.classList.toggle('selected', option === 'antes');
   if (entrega) entrega.classList.toggle('selected', option === 'entrega');
+  const hint = document.getElementById('pixPayOptionHint');
+  if (hint) {
+    hint.textContent = option === 'antes'
+      ? 'Você receberá um QR Code para pagar agora.'
+      : 'A chave PIX estará disponível na página do pedido.';
+  }
 }
 
 function selectChangeFor(value) {
@@ -469,8 +478,13 @@ async function placeOrder() {
     if (!res.ok) throw new Error(data.error || 'Erro ao confirmar pedido.');
 
     orderPlaced = true;
+    _savedCart = [...cart]; // salva para restaurar se trocar pagamento
     clearCart();
     clearForm();
+    // Desabilita apenas os botões de método de pagamento (não o pixDisplay inteiro)
+    document.querySelectorAll('#paymentSection .payment-option').forEach(el => {
+      el.style.pointerEvents = 'none'; el.style.opacity = '.5';
+    });
 
     if (paymentMethod === 'pix' && pixPayOption === 'antes') {
       // Pagar Antes — mostrar PIX para o cliente pagar agora
@@ -552,6 +566,10 @@ function showPixDisplay(data, isStatic = false) {
   renderSummary([]);
   document.getElementById('summaryTotal').textContent = total;
 
+  // Impede o usuário de mudar a opção de pagamento após o pedido ser feito
+  const pixPayOpts = document.getElementById('pixPaymentOptions');
+  if (pixPayOpts) pixPayOpts.style.display = 'none';
+
   display.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -589,6 +607,44 @@ async function claimPixAndRedirect() {
       </div>
     </div>`;
   document.body.appendChild(overlay);
+}
+
+// ── TROCAR FORMA DE PAGAMENTO ─────────────────────────────────────────────────────
+
+async function resetPayment() {
+  if (!_checkoutOrderData) return;
+  try {
+    await fetch(`/api/orders/${_checkoutOrderData.orderNumber}/cancel`, { method: 'POST' });
+  } catch {}
+
+  // Restaura carrinho
+  if (_savedCart.length) {
+    localStorage.setItem('pdm_cart', JSON.stringify(_savedCart));
+  }
+
+  // Reseta estado
+  orderPlaced = false;
+  _checkoutOrderData = null;
+
+  // Esconde PIX display e reabilita os botões de pagamento
+  const display = document.getElementById('pixDisplay');
+  if (display) display.classList.remove('visible');
+  document.querySelectorAll('#paymentSection .payment-option').forEach(el => {
+    el.style.pointerEvents = ''; el.style.opacity = '';
+  });
+
+  // Mostra opções de PIX novamente
+  const pixPayOpts = document.getElementById('pixPaymentOptions');
+  if (pixPayOpts) pixPayOpts.style.display = 'block';
+
+  // Reativa o botão de confirmar pedido
+  const btn = document.getElementById('placeOrderBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Pedido'; }
+
+  // Re-renderiza o resumo com os itens restaurados
+  renderSummary(JSON.parse(localStorage.getItem('pdm_cart') || '[]'));
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── PIX PAYMENT POLLING ────────────────────────────────────────────────────────────

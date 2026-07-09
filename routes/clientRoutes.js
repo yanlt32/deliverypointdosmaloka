@@ -103,7 +103,7 @@ router.post('/orders', async (req, res) => {
 
   // PIX "pagar agora" — ocultar do admin até o cliente confirmar pagamento
   if (payment_method === 'pix' && pix_pay_option === 'antes') {
-    db.prepare("UPDATE orders SET awaiting_pix_claim = 1 WHERE id = ?").run(id);
+    try { db.prepare("UPDATE orders SET awaiting_pix_claim = 1 WHERE id = ?").run(id); } catch {}
   }
 
   let pixData = null;
@@ -162,7 +162,9 @@ router.post('/orders/:id/subscribe', (req, res) => {
 router.post('/orders/:orderNumber/pix-claimed', (req, res) => {
   const order = db.prepare('SELECT id FROM orders WHERE order_number = ?').get(req.params.orderNumber);
   if (!order) return res.status(404).json({ error: 'Pedido não encontrado.' });
-  db.prepare("UPDATE orders SET pix_claimed = 1, awaiting_pix_claim = 0, updated_at = datetime('now','localtime') WHERE order_number = ?").run(req.params.orderNumber);
+  try { db.prepare("UPDATE orders SET pix_claimed = 1, awaiting_pix_claim = 0, updated_at = datetime('now','localtime') WHERE order_number = ?").run(req.params.orderNumber); } catch {
+    db.prepare("UPDATE orders SET pix_claimed = 1, updated_at = datetime('now','localtime') WHERE order_number = ?").run(req.params.orderNumber);
+  }
   res.json({ success: true });
 });
 
