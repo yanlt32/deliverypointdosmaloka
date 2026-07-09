@@ -101,10 +101,6 @@ router.post('/orders', async (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee, dtype);
 
-  // PIX "pagar agora" — ocultar do admin até o cliente confirmar pagamento
-  if (payment_method === 'pix' && pix_pay_option === 'antes') {
-    try { db.prepare("UPDATE orders SET awaiting_pix_claim = 1 WHERE id = ?").run(id); } catch {}
-  }
 
   let pixData = null;
   if (payment_method === 'pix') {

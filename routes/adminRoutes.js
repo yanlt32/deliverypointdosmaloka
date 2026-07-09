@@ -28,7 +28,7 @@ router.use(auth);
 // GET /api/admin/orders
 router.get('/orders', (req, res) => {
   const { status, date } = req.query;
-  let query = 'SELECT * FROM orders WHERE (awaiting_pix_claim = 0 OR pix_claimed = 1)';
+  let query = 'SELECT * FROM orders WHERE 1=1';
   const params = [];
 
   if (status && status !== 'todos') {

@@ -158,10 +158,10 @@ function seedSettings() {
     ['store_name',    'Point dos Malokas Lanches e Bebidas'],
   ].forEach(([k, v]) => ins.run(k, v));
 
-  // Sincroniza pix_key com env var sempre que o servidor iniciar
-  if (process.env.PIX_KEY) {
-    db.prepare("UPDATE settings SET value = ? WHERE key = 'pix_key'").run(process.env.PIX_KEY);
-  }
+  // Força pix_key correta sempre que o servidor iniciar
+  const correctPixKey = process.env.PIX_KEY || '+5511961962855';
+  db.prepare("UPDATE settings SET value = ? WHERE key = 'pix_key'").run(correctPixKey);
+  console.log(`[PIX] Chave PIX configurada: ${correctPixKey}`);
 }
 
 function seed() {

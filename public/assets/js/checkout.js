@@ -3,7 +3,7 @@ const FORM_KEY = 'pdm_checkout_form';
 const ORDER_PENDING_KEY = 'pdm_pending_order';
 
 let paymentMethod = 'pix';
-let pixPayOption  = 'antes'; // 'antes' | 'entrega'
+let pixPayOption  = 'entrega'; // sempre na entrega/retirada
 let deliveryType = 'retirada'; // entrega temporariamente desativada — em construção
 let orderPlaced = false;
 let changeFor = null;
@@ -486,27 +486,9 @@ async function placeOrder() {
       el.style.pointerEvents = 'none'; el.style.opacity = '.5';
     });
 
-    if (paymentMethod === 'pix' && pixPayOption === 'antes') {
-      // Pagar Antes — mostrar PIX para o cliente pagar agora
-      btn.textContent = '✅ Pedido Enviado!';
-      btn.disabled = true;
-      _checkoutOrderData = { orderId: data.orderId, orderNumber: data.orderNumber };
-
-      if (data.pix?.paymentId) {
-        // PIX dinâmico (Mercado Pago) — polling automático
-        const orderData = { orderId: data.orderId, orderNumber: data.orderNumber, total: data.total, pix: data.pix, paymentMethod: 'pix' };
-        savePendingOrder(orderData);
-        showPixDisplay(data, false);
-        startPixPolling(data.orderId, false);
-      } else {
-        // PIX estático — mostra QR + copia e cola + botão "Já Paguei"
-        showPixDisplay(data, true);
-      }
-    } else {
-      // Pagar na Entrega ou outros métodos — modal de confirmação
-      btn.textContent = '✅ Pedido Confirmado!';
-      showOrderConfirmedModal(data);
-    }
+    // Todos os métodos (incluindo PIX) vão para modal de confirmação
+    btn.textContent = '✅ Pedido Confirmado!';
+    showOrderConfirmedModal(data);
 
   } catch (err) {
     showToast(err.message, 'error');
