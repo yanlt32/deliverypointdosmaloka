@@ -1,11 +1,15 @@
 const webpush = require('web-push');
 const db = require('../database/database');
 
-const PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
-const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY;
+const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY?.replace(/=/g, '');
 
 if (PUBLIC_KEY && PRIVATE_KEY) {
-  webpush.setVapidDetails('mailto:contato@pointdosmalokas.com.br', PUBLIC_KEY, PRIVATE_KEY);
+  try {
+    webpush.setVapidDetails('mailto:contato@pointdosmalokas.com.br', PUBLIC_KEY, PRIVATE_KEY);
+  } catch (e) {
+    console.error('[Push] Erro ao configurar VAPID:', e.message);
+  }
 }
 
 const STATUS_MESSAGES = {

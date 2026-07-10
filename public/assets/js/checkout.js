@@ -486,9 +486,8 @@ async function placeOrder() {
       el.style.pointerEvents = 'none'; el.style.opacity = '.5';
     });
 
-    // Todos os métodos (incluindo PIX) vão para modal de confirmação
-    btn.textContent = '✅ Pedido Confirmado!';
-    showOrderConfirmedModal(data);
+    btn.textContent = '📱 Verificando telefone...';
+    showPhoneVerificationModal(data);
 
   } catch (err) {
     showToast(err.message, 'error');
@@ -501,6 +500,7 @@ async function placeOrder() {
 // ── ORDER CONFIRMED MODAL ──────────────────────────────────────────────────────────
 
 function showOrderConfirmedModal(data) {
+  document.getElementById('orderConfirmedModal')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'orderConfirmedModal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
@@ -514,6 +514,83 @@ function showOrderConfirmedModal(data) {
       <a href="/pedido?id=${data.orderId}" class="btn btn-gold btn-lg btn-block">📦 Acompanhar Meu Pedido →</a>
     </div>`;
   document.body.appendChild(overlay);
+}
+
+// ── PHONE VERIFICATION MODAL ───────────────────────────────────────────────────────
+
+const PENDING_VERIFY_KEY = 'pdm_pending_verify';
+
+function savePendingVerify(data) {
+  localStorage.setItem(PENDING_VERIFY_KEY, JSON.stringify({ orderId: data.orderId, orderNumber: data.orderNumber, phoneCode: data.phoneCode, total: data.total, savedAt: Date.now() }));
+}
+
+function clearPendingVerify() {
+  localStorage.removeItem(PENDING_VERIFY_KEY);
+}
+
+function showPhoneVerificationModal(data) {
+  savePendingVerify(data);
+  const storePhone = '5511947291983';
+  const msg = encodeURIComponent(`Meu código de confirmação é: *${data.phoneCode}* — Pedido ${data.orderNumber}`);
+  const waLink = `https://wa.me/${storePhone}?text=${msg}`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'phoneVerifyModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid rgba(245,197,24,.4);border-radius:20px;width:100%;max-width:380px;padding:2rem;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">📱</div>
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--gold);margin-bottom:.5rem;">CONFIRME SEU NÚMERO</h3>
+      <p style="color:var(--gray);font-size:.85rem;margin-bottom:1.5rem;line-height:1.6;">
+        Envie o código abaixo no WhatsApp da loja para confirmar seu pedido.
+      </p>
+
+      <div style="background:rgba(245,197,24,.08);border:2px solid var(--gold);border-radius:14px;padding:1.25rem;margin-bottom:1.25rem;">
+        <div style="font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;">Seu código</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:3.5rem;color:var(--gold);letter-spacing:.25em;line-height:1;">${data.phoneCode}</div>
+      </div>
+
+      <a href="${waLink}" target="_blank" class="btn btn-gold btn-lg btn-block" style="margin-bottom:.85rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+        💬 Enviar Código pelo WhatsApp
+      </a>
+
+      <div id="verifyStatus" style="display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:.82rem;color:var(--gray);margin-bottom:1rem;">
+        <div class="spinner" style="width:14px;height:14px;flex-shrink:0;"></div>
+        <span>Aguardando confirmação da loja...</span>
+      </div>
+
+      <p style="font-size:.72rem;color:var(--gray);line-height:1.5;">
+        Pedido <strong style="color:var(--white);">${data.orderNumber}</strong> · ${formatBRL(data.total)}<br>
+        <span style="color:rgba(239,68,68,.7);">Expira em 30 minutos se não confirmado.</span>
+      </p>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Poll a cada 5 segundos para checar phone_verified
+  const pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/orders/${data.orderId}`);
+      if (!res.ok) return;
+      const order = await res.json();
+      if (order.phone_verified === 1 || order.phone_verified === '1') {
+        clearInterval(pollInterval);
+        clearPendingVerify();
+        overlay.remove();
+        const btn = document.getElementById('placeOrderBtn');
+        if (btn) btn.textContent = '✅ Pedido Confirmado!';
+        showOrderConfirmedModal(data);
+      }
+      if (order.order_status === 'cancelado') {
+        clearInterval(pollInterval);
+        clearPendingVerify();
+        overlay.remove();
+        showToast('Pedido cancelado — código não confirmado ou incorreto.', 'error');
+        const btn = document.getElementById('placeOrderBtn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Pedido →'; }
+        orderPlaced = false;
+      }
+    } catch {}
+  }, 5000);
 }
 
 // ── PIX DISPLAY (inline, shown in the checkout form after placing order) ──────────

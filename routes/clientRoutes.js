@@ -93,14 +93,14 @@ router.post('/orders', async (req, res) => {
 
   const id = crypto.randomUUID();
   const orderNumber = 'PDM-' + Date.now().toString().slice(-6);
+  const phoneCode = Math.floor(100000 + Math.random() * 900000).toString();
 
   const fee = parseFloat(delivery_fee) || 0;
   const dtype = delivery_type === 'retirada' ? 'retirada' : 'entrega';
   db.prepare(`
-    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for, delivery_fee, delivery_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee, dtype);
-
+    INSERT INTO orders (id, order_number, customer_name, customer_phone, street, number, complement, neighborhood, city, reference, items_json, total, payment_method, notes, change_for, delivery_fee, delivery_type, phone_code, code_expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+30 minutes', 'localtime'))
+  `).run(id, orderNumber, customer_name, customer_phone, street, number, complement || '', neighborhood, city || 'São Paulo', reference || '', JSON.stringify(items), total, payment_method, notes || '', change_for || null, fee, dtype, phoneCode);
 
   let pixData = null;
   if (payment_method === 'pix') {
@@ -130,6 +130,7 @@ router.post('/orders', async (req, res) => {
     orderNumber,
     total,
     pix: pixData,
+    phoneCode,
   });
 });
 

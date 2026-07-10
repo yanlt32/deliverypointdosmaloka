@@ -25,8 +25,21 @@ router.post('/login', (req, res) => {
 // All routes below require auth
 router.use(auth);
 
+// Auto-cancela pedidos não verificados após expirar
+function cancelExpiredUnverified() {
+  try {
+    db.prepare(`
+      UPDATE orders SET order_status = 'cancelado', updated_at = datetime('now','localtime')
+      WHERE phone_verified = 0 AND phone_code IS NOT NULL
+      AND code_expires_at < datetime('now','localtime')
+      AND order_status NOT IN ('cancelado','entregue')
+    `).run();
+  } catch {}
+}
+
 // GET /api/admin/orders
 router.get('/orders', (req, res) => {
+  cancelExpiredUnverified();
   const { status, date } = req.query;
   let query = 'SELECT * FROM orders WHERE 1=1';
   const params = [];
@@ -65,6 +78,13 @@ router.get('/orders/search', (req, res) => {
 
   orders.forEach(o => { o.items = JSON.parse(o.items_json || '[]'); delete o.items_json; });
   res.json(orders);
+});
+
+// POST /api/admin/orders/:id/verify-phone
+router.post('/orders/:id/verify-phone', (req, res) => {
+  const result = db.prepare("UPDATE orders SET phone_verified = 1, updated_at = datetime('now','localtime') WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Pedido não encontrado.' });
+  res.json({ ok: true });
 });
 
 // DELETE /api/admin/orders/:id

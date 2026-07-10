@@ -25,7 +25,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderAllProducts(menuData, 'todos');
   renderCartUI();
   setupMobileCart();
+  checkPendingVerifyBanner();
 });
+
+async function checkPendingVerifyBanner() {
+  try {
+    const raw = localStorage.getItem('pdm_pending_verify');
+    if (!raw) return;
+    const pending = JSON.parse(raw);
+    if (!pending || Date.now() - pending.savedAt > 30 * 60 * 1000) {
+      localStorage.removeItem('pdm_pending_verify');
+      return;
+    }
+    const res = await fetch(`/api/orders/${pending.orderId}`);
+    if (!res.ok) return;
+    const order = await res.json();
+    if (order.order_status === 'cancelado' || order.phone_verified === 1) {
+      localStorage.removeItem('pdm_pending_verify');
+      return;
+    }
+    const storePhone = '5511947291983';
+    const msg = encodeURIComponent(`Meu código de confirmação é: *${pending.phoneCode}* — Pedido ${pending.orderNumber}`);
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:57px;left:0;right:0;z-index:900;background:var(--gold);color:var(--black);padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;font-size:.85rem;font-weight:600;';
+    banner.innerHTML = `
+      <span>📱 Pedido <strong>${pending.orderNumber}</strong> aguarda confirmação — envie o código <strong>${pending.phoneCode}</strong> no WhatsApp</span>
+      <div style="display:flex;gap:.6rem;align-items:center;flex-shrink:0;">
+        <a href="https://wa.me/${storePhone}?text=${msg}" target="_blank" style="background:var(--black);color:var(--gold);border:none;border-radius:6px;padding:.4rem .9rem;font-weight:700;font-size:.82rem;text-decoration:none;">💬 Enviar</a>
+        <button onclick="this.closest('div[style]').remove();localStorage.removeItem('pdm_pending_verify');" style="background:rgba(0,0,0,.15);border:none;border-radius:6px;padding:.4rem .7rem;cursor:pointer;font-size:1rem;">✕</button>
+      </div>`;
+    document.body.appendChild(banner);
+  } catch {}
+}
 
 async function loadStoreSettings() {
   try {

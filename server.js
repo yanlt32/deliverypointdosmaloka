@@ -13,6 +13,9 @@ app.use(express.urlencoded({ extended: true }));
 // Root redirect must come BEFORE static middleware (otherwise index.html would be served)
 app.get('/', (req, res) => res.redirect('/menu'));
 
+// Favicon — evita 404 no browser
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));

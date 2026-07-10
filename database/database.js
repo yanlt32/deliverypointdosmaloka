@@ -136,6 +136,9 @@ function init() {
   try { db.exec("ALTER TABLE orders ADD COLUMN pix_claimed INTEGER DEFAULT 0"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN pix_payload TEXT"); } catch {}
   try { db.exec("ALTER TABLE orders ADD COLUMN awaiting_pix_claim INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN phone_code TEXT"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN phone_verified INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN code_expires_at TEXT"); } catch {}
   try { db.exec(`UPDATE product_options SET max_select = 1 WHERE option_group IN ('Sabor','Sabores','Recheio 1','Recheio 2') AND max_select IS NULL`); } catch {}
   try { db.exec(`UPDATE product_options SET max_select = 3 WHERE option_group = 'Recheios (até 3)' AND max_select IS NULL`); } catch {}
   try { db.exec(`UPDATE products SET has_options = 1 WHERE id IN (SELECT DISTINCT product_id FROM product_options WHERE product_id IS NOT NULL) AND has_options = 0`); } catch {}

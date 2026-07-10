@@ -245,6 +245,18 @@ function renderOrders() {
           </div>
         </div>
         <div onclick="event.stopPropagation();">
+          ${order.phone_code && !order.phone_verified && !['cancelado','entregue'].includes(order.order_status) ? `
+          <div style="background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.4);border-radius:8px;padding:.6rem .75rem;margin-bottom:.5rem;text-align:center;">
+            <div style="font-size:.65rem;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem;">Código WhatsApp</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--gold);letter-spacing:.2em;">${order.phone_code}</div>
+            <button class="btn btn-sm" style="width:100%;margin-top:.4rem;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.4);font-weight:700;" onclick="verifyPhone('${order.id}')">
+              ✅ Validar
+            </button>
+            <button class="btn btn-sm" style="width:100%;margin-top:.3rem;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-weight:700;" onclick="rejectWrongCode('${order.id}','${order.order_number}')">
+              ❌ Código Errado
+            </button>
+          </div>` : order.phone_verified ? `
+          <div style="font-size:.72rem;color:#22c55e;text-align:center;margin-bottom:.4rem;">✅ Tel. validado</div>` : ''}
           <select class="status-select" onchange="updateOrderStatus('${order.id}', this.value, this)">
             <option value="novo"       ${order.order_status === 'novo'       ? 'selected' : ''}>Novo</option>
             <option value="confirmado" ${order.order_status === 'confirmado' ? 'selected' : ''}>Confirmado</option>
@@ -263,6 +275,31 @@ function renderOrders() {
       </div>`;
   }).join('');
   refreshIcons();
+}
+
+async function verifyPhone(orderId) {
+  try {
+    await apiFetch(`/orders/${orderId}/verify-phone`, { method: 'POST' });
+    const order = allOrders.find(o => o.id === orderId);
+    if (order) order.phone_verified = 1;
+    renderOrders();
+    showToast('Telefone validado! ✅');
+  } catch {
+    showToast('Erro ao validar telefone.', 'error');
+  }
+}
+
+async function rejectWrongCode(orderId, orderNumber) {
+  try {
+    await apiFetch(`/orders/${orderId}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'cancelado' }) });
+    const order = allOrders.find(o => o.id === orderId);
+    if (order) order.order_status = 'cancelado';
+    renderOrders();
+    renderOrderStats(allOrders);
+    showToast(`Pedido ${orderNumber} cancelado.`);
+  } catch {
+    showToast('Erro ao cancelar.', 'error');
+  }
 }
 
 async function deleteOrder(orderId, orderNumber) {
